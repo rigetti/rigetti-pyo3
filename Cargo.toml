@@ -1,0 +1,26 @@
+[package]
+name = "rigetti-pyo3"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/rigetti/rigetti-pyo3"
+readme = "README.md"
+categories = ["development-tools::ffi"]
+keywords = ["python", "pyo3", "ffi"]
+description = "Utilities for creating a Python wrapper for a Rust library."
+rust-version = "1.62.1"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["complex", "time"]
+complex = ["num-complex", "pyo3/num-complex"]
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+num-complex = { version = "0.4", optional = true }
+paste = "1.0"
+pyo3 = { version = "0.17", default-features = false, features = ["macros", "multiple-pymethods"] }
+time = { version = "0.3", optional = true }
+
+[dev-dependencies]
+thiserror = "1.0"
