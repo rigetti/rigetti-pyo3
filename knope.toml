@@ -1,0 +1,26 @@
+[package]
+versioned_files = ["Cargo.toml"]
+changelog = "CHANGELOG.md"
+
+[[workflows]]
+name = "release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "cargo update -w"
+
+[[workflows.steps]]
+type = "Command"
+command = "git add Cargo.lock && git commit -m \"chore: prepare release $version [skip ci]\" && git push"
+[workflows.steps.variables]
+"$version" = "Version"
+
+[[workflows.steps]]
+type = "Release"
+
+[github]
+owner = "rigetti"
+repo = "rigetti-pyo3"
