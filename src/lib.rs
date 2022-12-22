@@ -80,6 +80,7 @@ mod wrappers;
 
 #[cfg(feature = "complex")]
 pub use num_complex;
+pub use paste;
 pub use py_try_from::PyTryFrom;
 pub use pyo3;
 pub use to_python::ToPython;
