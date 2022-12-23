@@ -523,6 +523,7 @@ macro_rules! py_wrap_union_enum {
                         },
                     )+
                 }
+                use $crate::pyo3::exceptions::PyRuntimeError;
                 #[allow(unreachable_code)]
                 Err(PyRuntimeError::new_err("Enum has no inner data"))
             }
