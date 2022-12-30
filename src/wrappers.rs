@@ -509,6 +509,7 @@ macro_rules! py_wrap_union_enum {
                 ))
             }
 
+            #[allow(unreachable_code, unreachable_pattern)]
             pub fn inner(&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<$crate::pyo3::Py<$crate::pyo3::PyAny>> {
                 match &self.0 {
                     $(
@@ -518,13 +519,18 @@ macro_rules! py_wrap_union_enum {
                                 Ok($crate::pyo3::conversion::IntoPy::<$crate::pyo3::Py<$crate::pyo3::PyAny>>::into_py(
                                 <_ as $crate::ToPython<$py_variant>>::to_python(&[< inner_ $py_variant >], py)?,
                                 py,
-                            ))
+                            ));
                             )?
                         },
+                        $(
+                        _ => {
+                            use $crate::pyo3::exceptions::PyRuntimeError;
+                            return Err(PyRuntimeError::new_err(format!("Enum variant {} unimplemented", stringify!($py_variant))));
+                        },
+                        )?
                     )+
                 }
                 use $crate::pyo3::exceptions::PyRuntimeError;
-                #[allow(unreachable_code)]
                 Err(PyRuntimeError::new_err("Enum has no inner data"))
             }
 
@@ -613,6 +619,7 @@ macro_rules! wrap_error {
 #[macro_export]
 macro_rules! py_wrap_data_struct {
     (
+        $(#[$meta: meta])*
         $name: ident($rs_inner: ty) $(as $class_name: literal)? {
             $(
             $field_name: ident: $field_rs_type: ty => $field_py_type: ty
@@ -620,6 +627,9 @@ macro_rules! py_wrap_data_struct {
         }
     ) => {
         $crate::py_wrap_type! {
+            $(
+            #[$meta]
+            )*
             $name($rs_inner) $(as $class_name)?;
         }
 
@@ -636,9 +646,9 @@ macro_rules! py_wrap_data_struct {
                 }
 
                 #[setter]
-                fn [< set_ $field_name >](&mut self, py: $crate::pyo3::Python<'_>, from: &$crate::pyo3::PyAny) -> $crate::pyo3::PyResult<()> {
+                fn [< set_ $field_name >](&mut self, py: $crate::pyo3::Python<'_>, from: $crate::pyo3::Py<$field_py_type>) -> $crate::pyo3::PyResult<()> {
                     use $crate::{PyTryFrom, PyWrapperMut};
-                    let new_val = $field_rs_type::py_try_from_ref(py, from)?;
+                    let new_val = $field_rs_type::py_try_from(py, from)?;
                     self.as_inner_mut().$field_name = new_val;
                     Ok(())
                 }
