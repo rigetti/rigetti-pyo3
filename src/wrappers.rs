@@ -522,6 +522,8 @@ macro_rules! py_wrap_union_enum {
                             ));
                             )?
                         },
+                        // TODO: Allows for incomplete wrapper implementations. Helpful workaround
+                        // during dev, but may want to remove before merging
                         $(
                         _ => {
                             use $crate::pyo3::exceptions::PyRuntimeError;
