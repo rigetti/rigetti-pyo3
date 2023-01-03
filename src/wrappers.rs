@@ -650,7 +650,7 @@ macro_rules! py_wrap_data_struct {
                 #[setter]
                 fn [< set_ $field_name >](&mut self, py: $crate::pyo3::Python<'_>, from: $crate::pyo3::Py<$field_py_type>) -> $crate::pyo3::PyResult<()> {
                     use $crate::{PyTryFrom, PyWrapperMut};
-                    let new_val = $field_rs_type::py_try_from(py, from)?;
+                    let new_val = <$field_rs_type>::py_try_from(py, from)?;
                     self.as_inner_mut().$field_name = new_val;
                     Ok(())
                 }
