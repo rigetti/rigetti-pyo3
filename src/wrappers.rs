@@ -117,7 +117,7 @@ macro_rules! py_wrap_type {
         }
 
         $crate::private_impl_to_python_with_reference!(&self, py, $from => $name {
-            $crate::pyo3::Py::new(py, $name::from(self.clone()))
+            Ok($name::from(self.clone()))
         });
 
         impl From<$name> for $from {
@@ -532,11 +532,11 @@ macro_rules! py_wrap_union_enum {
                 matches!(self.0, $rs_inner::$variant(_))
             }
 
-            fn [< as_ $variant_name >](&self, py: $crate::pyo3::Python) -> Option<Py<$py_variant>> {
+            fn [< as_ $variant_name >](&self, py: $crate::pyo3::Python) -> Option<$py_variant> {
                 self.[< to_ $variant_name >](py).ok()
             }
 
-            fn [< to_ $variant_name >](&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<Py<$py_variant>> {
+            fn [< to_ $variant_name >](&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<$py_variant> {
                 if let $rs_inner::$variant(inner) = &self.0 {
                     <_ as $crate::ToPython<$py_variant>>::to_python(&inner, py)
                 } else {

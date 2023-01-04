@@ -15,6 +15,7 @@
 //! Unifying conversion traits from Rust data to Python.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::hash::BuildHasher;
 
 use pyo3::conversion::IntoPy;
 use pyo3::types::{
@@ -40,32 +41,20 @@ use pyo3::{
 use time::{Date, Duration, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 
 /// Convert from a Rust type into a Python type.
-pub trait ToPython<T: ToPyObject> {
+pub trait ToPython<P: ToPyObject> {
     /// Convert from Rust `self` into a Python type.
     ///
     /// # Errors
     ///
     /// Any failure while converting to Python.
-    fn to_python(&self, py: Python) -> PyResult<Py<T>>;
+    fn to_python(&self, py: Python) -> PyResult<P>;
 }
 
-// Simple blanket impl based on pyo3::IntoPy does not work because, e.g., `String`
-// does not impl `IntoPy<Py<PyString>>`, only `IntoPy<Py<PyAny>>`.
-//
-// Using the `impl IntoPy<Py<PyAny>>` is not viable either, because that is liable to
-// errors (panics, because this trait doesn't return `Result`). We'd have to clarify
-// which `std` types can convert to which `pyo3` types, and at that point we might as
-// well implement conversion without using `expect()`.
-
-/// Implement [`ToPython<PyAny>`] for the given Rust type by delegating to its implementation for
-/// the given Python type. Arguments are the same as for
-/// [`private_impl_to_python_for`](crate::private_impl_to_python_for).
-#[macro_export]
-macro_rules! private_impl_to_python_to_pyany {
-    (&$($lt: lifetime)? $self: ident, $py: ident, $rs_type: ty => $py_type: ty) => {
-        $crate::private_impl_to_python_for!(&$($lt)? $self, $py, $rs_type => $crate::pyo3::PyAny {
-            <Self as $crate::ToPython<$py_type>>::to_python($self, $py).map(|item| item.into_py($py))
-        });
+impl<T> ToPython<Py<PyAny>> for T
+    where T: ToPyObject
+{
+    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
+        Ok(self.to_object(py))
     }
 }
 
@@ -75,7 +64,7 @@ macro_rules! private_impl_to_python_to_pyany {
 macro_rules! private_impl_to_python_for {
     (&$($lt: lifetime)? $self: ident, $py: ident, $rs_type: ty => $py_type: ty $convert: block) => {
         impl$(<$lt>)? $crate::ToPython<$py_type> for $(&$lt)? $rs_type {
-            fn to_python(&$self, $py: $crate::pyo3::Python<'_>) -> $crate::pyo3::PyResult<$crate::pyo3::Py<$py_type>> {
+            fn to_python(&$self, $py: $crate::pyo3::Python<'_>) -> $crate::pyo3::PyResult<$py_type> {
                 $convert
             }
         }
@@ -93,22 +82,12 @@ macro_rules! private_impl_to_python_with_reference {
     };
 }
 
-/// Implement [`ToPython`] multiple times for the given types, accounting for owned/reference and [`PyAny`](crate::pyo3::PyAny).
-#[macro_export]
-macro_rules! private_impl_to_python_with_reference_and_pyany {
-    (&$self: ident, $py: ident, $rs_type: ty => $py_type: ty $convert: block) => {
-        $crate::private_impl_to_python_with_reference!(&$self, $py, $rs_type => $py_type $convert);
-        $crate::private_impl_to_python_to_pyany!(&$self, $py, $rs_type => $py_type);
-        $crate::private_impl_to_python_to_pyany!(&'a $self, $py, $rs_type => $py_type);
-    };
-}
-
 /// Implements [`IntoPython`] by converting to `Py<PyAny>` and extracting `Py<T>` from that.
 ///
 /// For types like integers, this is only way to convert.
 macro_rules! impl_for_primitive {
     ($rs_type: ty => $py_type: ty) => {
-        private_impl_to_python_with_reference_and_pyany!(&self, py, $rs_type => $py_type {
+        private_impl_to_python_with_reference!(&self, py, $rs_type => $py_type {
             // No way to convert except via ToPyObject and downcasting.
             self.into_py(py).extract(py)
         });
@@ -119,34 +98,34 @@ macro_rules! impl_for_primitive {
 
 // ==== Bool ====
 
-private_impl_to_python_with_reference_and_pyany!(&self, py, bool => PyBool {
+private_impl_to_python_with_reference!(&self, py, bool => Py<PyBool> {
     Ok(PyBool::new(py, *self).into_py(py))
 });
 
 // ==== ByteArray ====
 
-private_impl_to_python_for!(&'a self, py, [u8] => PyByteArray {
+private_impl_to_python_for!(&'a self, py, [u8] => Py<PyByteArray> {
     Ok(PyByteArray::new(py, self).into_py(py))
 });
 
-private_impl_to_python_with_reference!(&self, py, Vec<u8> => PyByteArray {
+private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyByteArray> {
     self.as_slice().to_python(py)
 });
 
 // ==== Bytes ====
 
-private_impl_to_python_for!(&'a self, py, [u8] => PyBytes {
+private_impl_to_python_for!(&'a self, py, [u8] => Py<PyBytes> {
     Ok(PyBytes::new(py, self).into_py(py))
 });
 
-private_impl_to_python_with_reference!(&self, py, Vec<u8> => PyBytes {
+private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyBytes> {
     self.as_slice().to_python(py)
 });
 
 // ==== Complex ====
 
 #[cfg(feature = "complex")]
-impl<'a, F> ToPython<PyComplex> for &'a Complex<F>
+impl<'a, F> ToPython<Py<PyComplex>> for &'a Complex<F>
 where
     F: Copy + Into<c_double>,
 {
@@ -156,39 +135,19 @@ where
 }
 
 #[cfg(feature = "complex")]
-impl<F> ToPython<PyComplex> for Complex<F>
+impl<F> ToPython<Py<PyComplex>> for Complex<F>
 where
     F: Copy + Into<c_double>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyComplex>> {
-        <&Self as ToPython<PyComplex>>::to_python(&self, py)
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<'a, F> ToPython<PyAny> for &'a Complex<F>
-where
-    F: Copy + Into<c_double>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyComplex>>::to_python(self, py).map(|c| c.into_py(py))
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<F> ToPython<PyAny> for Complex<F>
-where
-    F: Copy + Into<c_double>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyComplex>>::to_python(self, py).map(|c| c.into_py(py))
+        <&Self as ToPython<Py<PyComplex>>>::to_python(&self, py)
     }
 }
 
 // ==== Date ====
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, Date => PyDate {
+private_impl_to_python_with_reference!(&self, py, Date => Py<PyDate> {
     let year: i32 = self.year();
     let month: u8 = self.month().into();
     let day: u8 = self.day();
@@ -198,7 +157,7 @@ private_impl_to_python_with_reference_and_pyany!(&self, py, Date => PyDate {
 // ==== DateTime ====
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, DateTime => PyDateTime {
+private_impl_to_python_with_reference!(&self, py, DateTime => Py<PyDateTime> {
     match self {
         Self::Primitive(datetime) => datetime.to_python(py),
         Self::Offset(datetime) => datetime.to_python(py),
@@ -206,7 +165,7 @@ private_impl_to_python_with_reference_and_pyany!(&self, py, DateTime => PyDateTi
 });
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, PrimitiveDateTime => PyDateTime {
+private_impl_to_python_with_reference!(&self, py, PrimitiveDateTime => Py<PyDateTime> {
     let date = self.date();
     let time = self.time();
     let year: i32 = date.year();
@@ -220,7 +179,7 @@ private_impl_to_python_with_reference_and_pyany!(&self, py, PrimitiveDateTime =>
 });
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, OffsetDateTime => PyDateTime {
+private_impl_to_python_with_reference!(&self, py, OffsetDateTime => Py<PyDateTime> {
     let date = self.date();
     let time = self.time();
     let offset = self.offset();
@@ -239,7 +198,7 @@ private_impl_to_python_with_reference_and_pyany!(&self, py, OffsetDateTime => Py
 // ==== Delta ====
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, Duration => PyDelta {
+private_impl_to_python_with_reference!(&self, py, Duration => Py<PyDelta> {
     let days: i32 = self.whole_days().try_into().map_err(|_| {
         PyValueError::new_err(format!("Cannot fit {} days into a 32-bit signed integer", self.whole_days()))
     })?;
@@ -254,10 +213,25 @@ private_impl_to_python_with_reference_and_pyany!(&self, py, Duration => PyDelta 
 
 // ==== Dict ====
 
-impl<'a, K, V, Hasher> ToPython<PyDict> for &'a HashMap<K, V, Hasher>
+impl<'a, K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &'a HashMap<K1, V1, Hasher>
+    where K1: ToPython<K2>,
+          V1: ToPython<V2>,
+          K2: ToPyObject + Eq + std::hash::Hash,
+          V2: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<HashMap<K2, V2>> {
+        self.iter().map(|(key, val)| {
+            let key = key.to_python(py)?;
+            let val = val.to_python(py)?;
+            Ok((key, val))
+        }).collect::<Result<_, _>>()
+    }
+}
+
+impl<'a, K, V, Hasher> ToPython<Py<PyDict>> for &'a HashMap<K, V, Hasher>
 where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyDict>> {
         let dict = PyDict::new(py);
@@ -270,40 +244,49 @@ where
     }
 }
 
-impl<K, V, Hasher> ToPython<PyDict> for HashMap<K, V, Hasher>
+impl<K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for HashMap<K1, V1, Hasher>
+    where K1: ToPython<K2>,
+          V1: ToPython<V2>,
+          K2: ToPyObject + Eq + std::hash::Hash,
+          V2: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<HashMap<K2, V2>> {
+        <&Self as ToPython<HashMap<K2, V2>>>::to_python(&self, py)
+    }
+}
+
+impl<K, V, Hasher> ToPython<Py<PyDict>> for HashMap<K, V, Hasher>
 where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyDict>> {
-        <&Self as ToPython<PyDict>>::to_python(&self, py)
+        <&Self as ToPython<Py<PyDict>>>::to_python(&self, py)
     }
 }
 
-impl<K, V, Hasher> ToPython<PyAny> for HashMap<K, V, Hasher>
+impl<'a, K1, K2, V1, V2> ToPython<BTreeMap<K2, V2>> for &'a BTreeMap<K1, V1>
 where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
+    K1: ToPython<K2> + std::fmt::Debug,
+    V1: ToPython<V2>,
+    K2: ToPyObject + Ord,
+    V2: ToPyObject,
 {
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyDict>>::to_python(self, py).map(|dict| dict.into_py(py))
+    fn to_python(&self, py: Python) -> PyResult<BTreeMap<K2, V2>> {
+        let mut map = BTreeMap::new();
+        for (key, val) in *self {
+            let pykey = key.to_python(py)?;
+            let pyval = val.to_python(py)?;
+            map.insert(pykey, pyval);
+        }
+        Ok(map)
     }
 }
 
-impl<'a, K, V, Hasher> ToPython<PyAny> for &'a HashMap<K, V, Hasher>
+impl<'a, K, V> ToPython<Py<PyDict>> for &'a BTreeMap<K, V>
 where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyDict>>::to_python(self, py).map(|dict| dict.into_py(py))
-    }
-}
-
-impl<'a, K, V> ToPython<PyDict> for &'a BTreeMap<K, V>
-where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyDict>> {
         let dict = PyDict::new(py);
@@ -316,46 +299,38 @@ where
     }
 }
 
-impl<K, V> ToPython<PyDict> for BTreeMap<K, V>
+impl<K1, K2, V1, V2> ToPython<BTreeMap<K2, V2>> for BTreeMap<K1, V1>
 where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
+    K1: ToPython<K2> + std::fmt::Debug,
+    V1: ToPython<V2>,
+    K2: ToPyObject + Ord,
+    V2: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<BTreeMap<K2, V2>> {
+        <&Self as ToPython<BTreeMap<K2, V2>>>::to_python(&self, py)
+    }
+}
+
+impl<K, V> ToPython<Py<PyDict>> for BTreeMap<K, V>
+where
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyDict>> {
-        <&Self as ToPython<PyDict>>::to_python(&self, py)
-    }
-}
-
-impl<'a, K, V> ToPython<PyAny> for &'a BTreeMap<K, V>
-where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyDict>>::to_python(self, py).map(|dict| dict.into_py(py))
-    }
-}
-
-impl<K, V> ToPython<PyAny> for BTreeMap<K, V>
-where
-    K: ToPython<PyAny> + std::fmt::Debug,
-    V: ToPython<PyAny>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyDict>>::to_python(self, py).map(|dict| dict.into_py(py))
+        <&Self as ToPython<Py<PyDict>>>::to_python(&self, py)
     }
 }
 
 // ==== Float ====
 
-impl_for_primitive!(f32 => PyFloat);
-impl_for_primitive!(f64 => PyFloat);
+impl_for_primitive!(f32 => Py<PyFloat>);
+impl_for_primitive!(f64 => Py<PyFloat>);
 
 // ==== FrozenSet ====
 
-impl<'a, T, Hasher> ToPython<PyFrozenSet> for &'a HashSet<T, Hasher>
+impl<'a, T, Hasher> ToPython<Py<PyFrozenSet>> for &'a HashSet<T, Hasher>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyFrozenSet>> {
         let elements = self
@@ -366,18 +341,18 @@ where
     }
 }
 
-impl<T, Hasher> ToPython<PyFrozenSet> for HashSet<T, Hasher>
+impl<T, Hasher> ToPython<Py<PyFrozenSet>> for HashSet<T, Hasher>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyFrozenSet>> {
-        <&Self as ToPython<PyFrozenSet>>::to_python(&self, py)
+        <&Self as ToPython<Py<PyFrozenSet>>>::to_python(&self, py)
     }
 }
 
-impl<'a, T> ToPython<PyFrozenSet> for &'a BTreeSet<T>
+impl<'a, T> ToPython<Py<PyFrozenSet>> for &'a BTreeSet<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyFrozenSet>> {
         let elements = self
@@ -388,33 +363,46 @@ where
     }
 }
 
-impl<T> ToPython<PyFrozenSet> for BTreeSet<T>
+impl<T> ToPython<Py<PyFrozenSet>> for BTreeSet<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyFrozenSet>> {
-        <&Self as ToPython<PyFrozenSet>>::to_python(&self, py)
+        <&Self as ToPython<Py<PyFrozenSet>>>::to_python(&self, py)
     }
 }
 
 // ==== Integer ====
 
-impl_for_primitive!(i8 => PyLong);
-impl_for_primitive!(i16 => PyLong);
-impl_for_primitive!(i32 => PyLong);
-impl_for_primitive!(i64 => PyLong);
-impl_for_primitive!(i128 => PyLong);
-impl_for_primitive!(u8 => PyLong);
-impl_for_primitive!(u16 => PyLong);
-impl_for_primitive!(u32 => PyLong);
-impl_for_primitive!(u64 => PyLong);
-impl_for_primitive!(u128 => PyLong);
+impl_for_primitive!(i8 => Py<PyLong>);
+impl_for_primitive!(i16 => Py<PyLong>);
+impl_for_primitive!(i32 => Py<PyLong>);
+impl_for_primitive!(i64 => Py<PyLong>);
+impl_for_primitive!(i128 => Py<PyLong>);
+impl_for_primitive!(u8 => Py<PyLong>);
+impl_for_primitive!(u16 => Py<PyLong>);
+impl_for_primitive!(u32 => Py<PyLong>);
+impl_for_primitive!(u64 => Py<PyLong>);
+impl_for_primitive!(u128 => Py<PyLong>);
 
 // ==== List ====
 
-impl<'a, T> ToPython<PyList> for &'a [T]
+impl<'a, T, P> ToPython<Vec<P>> for &'a [T]
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<P> + Clone,
+    P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<Vec<P>> {
+        self
+            .iter()
+            .map(|item| item.to_python(py))
+            .collect::<PyResult<Vec<_>>>()
+    }
+}
+
+impl<'a, T> ToPython<Py<PyList>> for &'a [T]
+where
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyList>> {
         let elements = self
@@ -425,56 +413,72 @@ where
     }
 }
 
-impl<'a, T> ToPython<PyAny> for &'a [T]
-where
-    T: ToPython<PyAny> + Clone,
+impl<T, P> ToPython<Vec<P>> for Vec<T>
+    where T: ToPython<P> + Clone,
+          P: ToPyObject,
 {
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PyList>>::to_python(self, py).map(|list| list.into_py(py))
+    fn to_python(&self, py: Python) -> PyResult<Vec<P>> {
+        self.as_slice().to_python(py)
     }
 }
 
-impl<T> ToPython<PyList> for Vec<T>
+impl<'a, T, P> ToPython<Vec<P>> for &'a Vec<T>
+    where T: ToPython<P> + Clone,
+          P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<Vec<P>> {
+        self.as_slice().to_python(py)
+    }
+}
+
+impl<T> ToPython<Py<PyList>> for Vec<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyList>> {
         self.as_slice().to_python(py)
     }
 }
 
-impl<'a, T> ToPython<PyList> for &'a Vec<T>
+impl<'a, T> ToPython<Py<PyList>> for &'a Vec<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyList>> {
-        self.as_slice().to_python(py)
-    }
-}
-
-impl<T> ToPython<PyAny> for Vec<T>
-where
-    T: ToPython<PyAny> + Clone,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        self.as_slice().to_python(py)
-    }
-}
-
-impl<'a, T> ToPython<PyAny> for &'a Vec<T>
-where
-    T: ToPython<PyAny> + Clone,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
         self.as_slice().to_python(py)
     }
 }
 
 // ==== Set ====
 
-impl<'a, T, Hasher> ToPython<PySet> for &'a HashSet<T, Hasher>
+impl<'a, T, P, Hasher> ToPython<HashSet<P, Hasher>> for &'a HashSet<T, Hasher>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<P> + Clone,
+    P: ToPyObject + std::hash::Hash + Eq,
+    Hasher: Default + BuildHasher,
+{
+    fn to_python(&self, py: Python) -> PyResult<HashSet<P, Hasher>> {
+        self
+            .iter()
+            .map(|item| item.to_python(py))
+            .collect::<PyResult<_>>()
+    }
+}
+
+impl<T, P, Hasher> ToPython<HashSet<P, Hasher>> for HashSet<T, Hasher>
+where
+    T: ToPython<P> + Clone,
+    P: ToPyObject + std::hash::Hash + Eq,
+    Hasher: Default + BuildHasher,
+{
+    fn to_python(&self, py: Python) -> PyResult<HashSet<P, Hasher>> {
+        <&Self as ToPython<HashSet<P, Hasher>>>::to_python(&self, py)
+    }
+}
+
+impl<'a, T, Hasher> ToPython<Py<PySet>> for &'a HashSet<T, Hasher>
+where
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PySet>> {
         // Using PySet::new seems to do extra cloning, so build manually.
@@ -486,36 +490,42 @@ where
     }
 }
 
-impl<T, Hasher> ToPython<PySet> for HashSet<T, Hasher>
+impl<T, Hasher> ToPython<Py<PySet>> for HashSet<T, Hasher>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PySet>> {
-        <&Self as ToPython<PySet>>::to_python(&self, py)
+        <&Self as ToPython<Py<PySet>>>::to_python(&self, py)
     }
 }
 
-impl<'a, T, Hasher> ToPython<PyAny> for &'a HashSet<T, Hasher>
+impl<'a, T, P> ToPython<BTreeSet<P>> for &'a BTreeSet<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<P> + Clone,
+    // Hash is required for the ToPyObject impl
+    P: ToPyObject + Ord + std::hash::Hash,
 {
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PySet>>::to_python(self, py).map(|set| set.into_py(py))
+    fn to_python(&self, py: Python) -> PyResult<BTreeSet<P>> {
+        self
+            .iter()
+            .map(|item| item.to_python(py))
+            .collect::<PyResult<_>>()
     }
 }
 
-impl<T, Hasher> ToPython<PyAny> for HashSet<T, Hasher>
+impl<T, P> ToPython<BTreeSet<P>> for BTreeSet<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<P> + Clone,
+    P: ToPyObject + Ord + std::hash::Hash,
 {
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PySet>>::to_python(self, py).map(|set| set.into_py(py))
+    fn to_python(&self, py: Python) -> PyResult<BTreeSet<P>> {
+        <&Self as ToPython<BTreeSet<P>>>::to_python(&self, py)
     }
 }
 
-impl<'a, T> ToPython<PySet> for &'a BTreeSet<T>
+impl<'a, T> ToPython<Py<PySet>> for &'a BTreeSet<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PySet>> {
         // Using PySet::new seems to do extra cloning, so build manually.
@@ -527,48 +537,29 @@ where
     }
 }
 
-impl<T> ToPython<PySet> for BTreeSet<T>
+impl<T> ToPython<Py<PySet>> for BTreeSet<T>
 where
-    T: ToPython<PyAny> + Clone,
+    T: ToPython<Py<PyAny>> + Clone,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PySet>> {
-        <&Self as ToPython<PySet>>::to_python(&self, py)
-    }
-}
-
-impl<'a, T> ToPython<PyAny> for &'a BTreeSet<T>
-where
-    T: ToPython<PyAny> + Clone,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PySet>>::to_python(self, py).map(|set| set.into_py(py))
-    }
-}
-
-impl<T> ToPython<PyAny> for BTreeSet<T>
-where
-    T: ToPython<PyAny> + Clone,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <Self as ToPython<PySet>>::to_python(self, py).map(|set| set.into_py(py))
+        <&Self as ToPython<Py<PySet>>>::to_python(&self, py)
     }
 }
 
 // ==== String ====
 
-private_impl_to_python_for!(&'a self, py, str => PyString {
+private_impl_to_python_for!(&'a self, py, str => Py<PyString> {
     Ok(PyString::new(py, self).into_py(py))
 });
-private_impl_to_python_to_pyany!(&'a self, py, str => PyString);
 
-private_impl_to_python_with_reference_and_pyany!(&self, py, String => PyString {
+private_impl_to_python_with_reference!(&self, py, String => Py<PyString> {
     self.as_str().to_python(py)
 });
 
 // ==== Time ====
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, (Time, Option<UtcOffset>) => PyTime {
+private_impl_to_python_with_reference!(&self, py, (Time, Option<UtcOffset>) => Py<PyTime> {
     let (time, offset) = self;
     let hour = time.hour();
     let minute = time.minute();
@@ -584,7 +575,7 @@ private_impl_to_python_with_reference_and_pyany!(&self, py, (Time, Option<UtcOff
 // ==== TzInfo ====
 
 #[cfg(feature = "time")]
-private_impl_to_python_with_reference_and_pyany!(&self, py, UtcOffset => PyTzInfo {
+private_impl_to_python_with_reference!(&self, py, UtcOffset => Py<PyTzInfo> {
     let datetime = py.import("datetime")?;
     let timezone = datetime.getattr("timezone")?;
     let (hour, minute, second) = self.as_hms();
