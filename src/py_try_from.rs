@@ -20,7 +20,7 @@ use pyo3::{
     types::{
         PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString,
     },
-    Py, PyAny, PyResult, Python, FromPyObject, PyTypeInfo,
+    Py, PyAny, PyResult, Python, PyTypeInfo,
 };
 
 #[cfg(feature = "complex")]
@@ -362,7 +362,6 @@ where
 
 impl<T, P> PyTryFrom<Option<P>> for Option<T>
 where T: PyTryFrom<P>,
-      P: for<'a> FromPyObject<'a>,
 {
     fn py_try_from(py: Python, item: &Option<P>) -> PyResult<Self> {
         item.as_ref().map_or_else(|| Ok(None), |item| T::py_try_from(py, item).map(Some))
