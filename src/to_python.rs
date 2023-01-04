@@ -385,6 +385,17 @@ impl_for_primitive!(u32 => Py<PyLong>);
 impl_for_primitive!(u64 => Py<PyLong>);
 impl_for_primitive!(u128 => Py<PyLong>);
 
+// ==== Optional[T] ====
+
+impl<T, P> ToPython<Option<P>> for Option<T>
+    where T: ToPython<P>,
+          P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<Option<P>> {
+        self.as_ref().map(|inner| inner.to_python(py)).transpose()
+    }
+}
+
 // ==== List ====
 
 impl<'a, T, P> ToPython<Vec<P>> for &'a [T]
