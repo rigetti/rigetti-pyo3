@@ -132,16 +132,16 @@ pub mod python {
     py_wrap_struct! {
         PyYak(Yak) as "Yak" {
             py -> rs {
-                py_dict: PyDict => Yak {
-                    let is_shaved: &PyBool = py_dict.as_mapping().get_item("is_shaved")?.downcast()?;
+                py_dict: Py<PyDict> => Yak {
+                    let is_shaved: &PyBool = py_dict.as_ref(py).as_mapping().get_item("is_shaved")?.downcast()?;
                     if is_shaved.is_true() {
                         Ok::<_, PyErr>(Yak::new_shaved())
                     } else {
                         Ok(Yak::new())
                     }
                 },
-                py_bool: PyBool => bool {
-                    bool::py_try_from_ref(py, py_bool)
+                py_bool: Py<PyBool> => bool {
+                    bool::py_try_from(py, &py_bool)
                 }
             },
             rs -> py {
@@ -256,7 +256,7 @@ try:
     yak5.shave_with(clippers)
 except CloggedClippersError:
     pass
-    
+
 clippers.unclog()
 yak5.shave_with(clippers)
 "#;
