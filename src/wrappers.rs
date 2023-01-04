@@ -642,15 +642,15 @@ macro_rules! py_wrap_data_struct {
             impl $name {
                 $(
                 #[getter]
-                fn [< get_ $field_name >](&self, py: $crate::pyo3::Python<'_>) -> $crate::pyo3::PyResult<$crate::pyo3::Py<$field_py_type>> {
+                fn [< get_ $field_name >](&self, py: $crate::pyo3::Python<'_>) -> $crate::pyo3::PyResult<$field_py_type> {
                     use $crate::{PyWrapper, ToPython};
                     <$field_rs_type as ToPython<$field_py_type>>::to_python(&self.as_inner().$field_name, py)
                 }
 
                 #[setter]
-                fn [< set_ $field_name >](&mut self, py: $crate::pyo3::Python<'_>, from: $crate::pyo3::Py<$field_py_type>) -> $crate::pyo3::PyResult<()> {
+                fn [< set_ $field_name >](&mut self, py: $crate::pyo3::Python<'_>, from: $field_py_type) -> $crate::pyo3::PyResult<()> {
                     use $crate::{PyTryFrom, PyWrapperMut};
-                    let new_val = <$field_rs_type>::py_try_from(py, from)?;
+                    let new_val = <$field_rs_type>::py_try_from(py, &from)?;
                     self.as_inner_mut().$field_name = new_val;
                     Ok(())
                 }
