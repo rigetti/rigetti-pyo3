@@ -102,17 +102,18 @@ macro_rules! py_wrap_type {
         impl $crate::PyTryFrom<$name> for $from {
             fn py_try_from(
                 py: $crate::pyo3::Python,
-                item: $crate::pyo3::Py<$name>,
-            ) -> $crate::pyo3::PyResult<Self> {
-                let cell: &$crate::pyo3::PyCell<$name> = item.into_ref(py);
-                let item: &$name = &*cell.borrow();
-                Self::py_try_from_ref(py, item)
-            }
-            fn py_try_from_ref(
-                py: $crate::pyo3::Python,
                 item: &$name,
             ) -> $crate::pyo3::PyResult<Self> {
                 Ok(item.0.clone())
+            }
+        }
+
+        impl $crate::PyTryFrom<$crate::pyo3::PyAny> for $name {
+            fn py_try_from(
+                py: $crate::pyo3::Python,
+                item: &$crate::pyo3::PyAny,
+            ) -> $crate::pyo3::PyResult<Self> {
+                item.extract()
             }
         }
 
@@ -373,13 +374,12 @@ macro_rules! py_wrap_struct {
         }
 
         $(
-        impl TryFrom<$crate::pyo3::Py<$py_src>> for $name {
+        impl TryFrom<$py_src> for $name {
             #[allow(unused_qualifications)]
             type Error = pyo3::PyErr;
-            fn try_from($py_ident: $crate::pyo3::Py<$py_src>) -> Result<Self, Self::Error> {
+            fn try_from($py_ident: $py_src) -> Result<Self, Self::Error> {
                 $crate::pyo3::Python::with_gil(|$py_for_from| {
                     let rust = {
-                        let $py_ident: &$py_src = $py_ident.as_ref($py_for_from);
                         $to_rs
                     }?;
                     Ok(Self::from(<$rs_from>::from(rust)))
@@ -413,7 +413,7 @@ macro_rules! py_wrap_struct {
                 use $crate::pyo3::FromPyObject;
 
                 $(
-                if let Ok(item) = input.extract::<$crate::pyo3::Py<$py_src>>(py) {
+                if let Ok(item) = input.extract::<$py_src>(py) {
                     return Self::try_from(item);
                 }
                 )+
@@ -489,10 +489,10 @@ macro_rules! py_wrap_union_enum {
         #[$crate::pyo3::pymethods]
         impl $name {
             #[new]
-            pub fn new(py: $crate::pyo3::Python, input: $crate::pyo3::Py<$crate::pyo3::PyAny>) -> $crate::pyo3::PyResult<Self> {
+            pub fn new(py: $crate::pyo3::Python, input: &$crate::pyo3::PyAny) -> $crate::pyo3::PyResult<Self> {
                 $(
-                if let Ok(inner) = input.extract::<$crate::pyo3::Py<$py_variant>>(py) {
-                    if let Ok(item) = $crate::PyTryFrom::py_try_from(py, inner) {
+                if let Ok(inner) = <$py_variant as $crate::PyTryFrom<$crate::pyo3::PyAny>>::py_try_from(py, input) {
+                    if let Ok(item) = $crate::PyTryFrom::py_try_from(py, &inner) {
                         return Ok(Self($rs_inner::$variant(item)));
                     }
                 }
@@ -502,7 +502,7 @@ macro_rules! py_wrap_union_enum {
                     format!(
                         "could not create {} from {}",
                         stringify!($name),
-                        input.as_ref(py).repr()?
+                        input.repr()?
                     )
                 ))
             }
@@ -522,8 +522,8 @@ macro_rules! py_wrap_union_enum {
 
             $(
             #[staticmethod]
-            pub fn [< from_ $variant_name >](py: $crate::pyo3::Python, inner: Py<$py_variant>) -> $crate::pyo3::PyResult<Self> {
-                $crate::PyTryFrom::<$py_variant>::py_try_from(py, inner)
+            pub fn [< from_ $variant_name >](py: $crate::pyo3::Python, inner: $py_variant) -> $crate::pyo3::PyResult<Self> {
+                $crate::PyTryFrom::<$py_variant>::py_try_from(py, &inner)
                     .map($rs_inner::$variant)
                     .map(Self)
             }
