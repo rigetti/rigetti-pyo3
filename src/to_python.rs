@@ -51,7 +51,8 @@ pub trait ToPython<P: ToPyObject> {
 }
 
 impl<T> ToPython<Py<PyAny>> for T
-    where T: ToPyObject
+where
+    T: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
         Ok(self.to_object(py))
@@ -214,17 +215,20 @@ private_impl_to_python_with_reference!(&self, py, Duration => Py<PyDelta> {
 // ==== Dict ====
 
 impl<'a, K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &'a HashMap<K1, V1, Hasher>
-    where K1: ToPython<K2>,
-          V1: ToPython<V2>,
-          K2: ToPyObject + Eq + std::hash::Hash,
-          V2: ToPyObject,
+where
+    K1: ToPython<K2>,
+    V1: ToPython<V2>,
+    K2: ToPyObject + Eq + std::hash::Hash,
+    V2: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<HashMap<K2, V2>> {
-        self.iter().map(|(key, val)| {
-            let key = key.to_python(py)?;
-            let val = val.to_python(py)?;
-            Ok((key, val))
-        }).collect::<Result<_, _>>()
+        self.iter()
+            .map(|(key, val)| {
+                let key = key.to_python(py)?;
+                let val = val.to_python(py)?;
+                Ok((key, val))
+            })
+            .collect::<Result<_, _>>()
     }
 }
 
@@ -245,10 +249,11 @@ where
 }
 
 impl<K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for HashMap<K1, V1, Hasher>
-    where K1: ToPython<K2>,
-          V1: ToPython<V2>,
-          K2: ToPyObject + Eq + std::hash::Hash,
-          V2: ToPyObject,
+where
+    K1: ToPython<K2>,
+    V1: ToPython<V2>,
+    K2: ToPyObject + Eq + std::hash::Hash,
+    V2: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<HashMap<K2, V2>> {
         <&Self as ToPython<HashMap<K2, V2>>>::to_python(&self, py)
@@ -388,8 +393,9 @@ impl_for_primitive!(u128 => Py<PyLong>);
 // ==== Optional[T] ====
 
 impl<T, P> ToPython<Option<P>> for Option<T>
-    where T: ToPython<P>,
-          P: ToPyObject,
+where
+    T: ToPython<P>,
+    P: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<Option<P>> {
         self.as_ref().map(|inner| inner.to_python(py)).transpose()
@@ -404,8 +410,7 @@ where
     P: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<Vec<P>> {
-        self
-            .iter()
+        self.iter()
             .map(|item| item.to_python(py))
             .collect::<PyResult<Vec<_>>>()
     }
@@ -425,8 +430,9 @@ where
 }
 
 impl<T, P> ToPython<Vec<P>> for Vec<T>
-    where T: ToPython<P> + Clone,
-          P: ToPyObject,
+where
+    T: ToPython<P> + Clone,
+    P: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<Vec<P>> {
         self.as_slice().to_python(py)
@@ -434,8 +440,9 @@ impl<T, P> ToPython<Vec<P>> for Vec<T>
 }
 
 impl<'a, T, P> ToPython<Vec<P>> for &'a Vec<T>
-    where T: ToPython<P> + Clone,
-          P: ToPyObject,
+where
+    T: ToPython<P> + Clone,
+    P: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<Vec<P>> {
         self.as_slice().to_python(py)
@@ -469,8 +476,7 @@ where
     Hasher: Default + BuildHasher,
 {
     fn to_python(&self, py: Python) -> PyResult<HashSet<P, Hasher>> {
-        self
-            .iter()
+        self.iter()
             .map(|item| item.to_python(py))
             .collect::<PyResult<_>>()
     }
@@ -517,8 +523,7 @@ where
     P: ToPyObject + Ord + std::hash::Hash,
 {
     fn to_python(&self, py: Python) -> PyResult<BTreeSet<P>> {
-        self
-            .iter()
+        self.iter()
             .map(|item| item.to_python(py))
             .collect::<PyResult<_>>()
     }

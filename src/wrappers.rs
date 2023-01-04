@@ -513,32 +513,38 @@ macro_rules! py_wrap_union_enum {
             pub fn inner(&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<$crate::pyo3::Py<$crate::pyo3::PyAny>> {
                 match &self.0 {
                     $(
-                        $rs_inner::$variant$(([< inner_ $py_variant >]))? => {
-                            $(
-                            return
-                                Ok($crate::pyo3::conversion::IntoPy::<$crate::pyo3::Py<$crate::pyo3::PyAny>>::into_py(
-                                <_ as $crate::ToPython<$py_variant>>::to_python(&[< inner_ $py_variant >], py)?,
+                        $($rs_inner::$variant(inner) => {
+                            Ok($crate::pyo3::conversion::IntoPy::<$crate::pyo3::Py<$crate::pyo3::PyAny>>::into_py(
+                                <_ as $crate::ToPython<$py_variant>>::to_python(inner, py)?,
                                 py,
-                            ));
-                            )?
-                        },
+                            ))
+                        },)?
                         // TODO: Allows for incomplete wrapper implementations. Helpful workaround
                         // during dev, but may want to remove before merging
                         $(
                         _ => {
                             use $crate::pyo3::exceptions::PyRuntimeError;
-                            return Err(PyRuntimeError::new_err(format!("Enum variant {} unimplemented", stringify!($py_variant))));
+                            Err(PyRuntimeError::new_err(format!("Enum variant {} unimplemented", stringify!($py_variant))))
                         },
                         )?
                     )+
+                    _ => {
+                        use $crate::pyo3::exceptions::PyRuntimeError;
+                        Err(PyRuntimeError::new_err("Enum has no inner data"))
+                    }
                 }
-                use $crate::pyo3::exceptions::PyRuntimeError;
-                Err(PyRuntimeError::new_err("Enum has no inner data"))
             }
 
             $(
             const fn [< is_ $variant_name >](&self) -> bool {
-                matches!(&self.0, $rs_inner::$variant$(([< _ $py_variant >]))?)
+                match &self.0 {
+                    $($rs_inner::$variant(_) => {
+                        let _: Option<$py_variant> = None;
+                        true
+                    },
+                    )?
+                    _ => false
+                }
             }
                 $(
                 #[staticmethod]
@@ -554,7 +560,7 @@ macro_rules! py_wrap_union_enum {
 
                 fn [< to_ $variant_name >](&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<$py_variant> {
                     if let $rs_inner::$variant(inner) = &self.0 {
-                        <_ as $crate::ToPython<$py_variant>>::to_python(&inner, py)
+                        <_ as $crate::ToPython<$py_variant>>::to_python(inner, py)
                     } else {
                         Err($crate::pyo3::exceptions::PyValueError::new_err(
                             concat!("expected self to be a ", stringify!($variant_name))
