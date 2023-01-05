@@ -394,13 +394,23 @@ impl_for_primitive!(u128 => Py<PyLong>);
 
 // ==== Optional[T] ====
 
-impl<T, P> ToPython<Option<P>> for Option<T>
+impl<'a, T, P> ToPython<Option<P>> for &'a Option<T>
 where
     T: ToPython<P>,
     P: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<Option<P>> {
         self.as_ref().map(|inner| inner.to_python(py)).transpose()
+    }
+}
+
+impl<T, P> ToPython<Option<P>> for Option<T>
+where
+    T: ToPython<P>,
+    P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<Option<P>> {
+        <&Self as ToPython<Option<P>>>::to_python(&self, py)
     }
 }
 

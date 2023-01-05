@@ -450,7 +450,7 @@ macro_rules! private_ultimate_type {
 macro_rules! private_intermediate_to_python {
     ($py: ident, &$item: ident $(=> $convert: ty)+) => {{
         $(
-        let $item: $convert = $crate::ToPython::to_python(&$item, $py)?;
+        let $item: $convert = $crate::ToPython::<$convert>::to_python(&$item, $py)?;
         )+
         Ok::<_, $crate::pyo3::PyErr>($item)
     }}
