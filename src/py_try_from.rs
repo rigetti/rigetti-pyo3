@@ -14,9 +14,13 @@
 
 //! Unifying conversion traits from Python to Rust data.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    fmt::Display,
+};
 
 use pyo3::{
+    exceptions::PyFloatingPointError,
     types::{
         PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString,
     },
@@ -25,6 +29,8 @@ use pyo3::{
 
 #[cfg(feature = "complex")]
 use num_complex::Complex;
+#[cfg(feature = "complex")]
+use num_traits::{Float, FloatConst};
 #[cfg(feature = "complex")]
 use pyo3::types::PyComplex;
 #[cfg(feature = "complex")]
@@ -196,7 +202,7 @@ impl_try_from_self!(PyComplex);
 #[cfg(feature = "complex")]
 impl<F> PyTryFrom<Py<PyComplex>> for Complex<F>
 where
-    F: Copy + From<c_double>,
+    F: Copy + Float + FloatConst + Into<c_double> + Display,
 {
     fn py_try_from(py: Python, item: &Py<PyComplex>) -> PyResult<Self> {
         Self::py_try_from(py, item.as_ref(py))
@@ -206,12 +212,24 @@ where
 #[cfg(feature = "complex")]
 impl<F> PyTryFrom<PyComplex> for Complex<F>
 where
-    F: Copy + From<c_double>,
+    // `Display` seems like an odd trait to require, but it is used to make a more useful
+    // error message. The types realistically used for this are `f32` and `f64` both of which
+    // impl `Display`, so there's no issue there.
+    F: Copy + Float + FloatConst + Into<c_double> + Display,
 {
     fn py_try_from(_py: Python, item: &PyComplex) -> PyResult<Self> {
+        let make_error = |val: c_double| {
+            PyFloatingPointError::new_err(format!(
+                "expected {val} to be between {} and {}, inclusive",
+                F::min_value(),
+                F::max_value(),
+            ))
+        };
         Ok(Self {
-            re: F::from(item.real()),
-            im: F::from(item.imag()),
+            // TODO: FloatingPointError (not used by base Python but used by e.g. numpy)
+            // or ValueError?
+            re: F::from(item.real()).ok_or_else(|| make_error(item.real()))?,
+            im: F::from(item.imag()).ok_or_else(|| make_error(item.imag()))?,
         })
     }
 }
@@ -219,7 +237,7 @@ where
 #[cfg(feature = "complex")]
 impl<F> PyTryFrom<PyAny> for Complex<F>
 where
-    F: Copy + From<c_double>,
+    F: Copy + Float + FloatConst + Into<c_double> + Display,
 {
     fn py_try_from(py: Python, item: &PyAny) -> PyResult<Self> {
         let dict: &PyComplex = item.downcast()?;
@@ -449,7 +467,8 @@ impl_try_from_primitive!(PyInt => u128);
 impl_try_from_self!(PyList);
 
 impl<P, T> PyTryFrom<Vec<P>> for Vec<T>
-    where T: PyTryFrom<P>
+where
+    T: PyTryFrom<P>,
 {
     fn py_try_from(py: Python, item: &Vec<P>) -> PyResult<Self> {
         item.iter().map(|item| T::py_try_from(py, item)).collect()

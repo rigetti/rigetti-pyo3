@@ -26,6 +26,8 @@ use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
 #[cfg(feature = "complex")]
 use num_complex::Complex;
 #[cfg(feature = "complex")]
+use num_traits::{Float, FloatConst};
+#[cfg(feature = "complex")]
 use pyo3::types::PyComplex;
 #[cfg(feature = "complex")]
 use std::os::raw::c_double;
@@ -128,7 +130,7 @@ private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyBytes> {
 #[cfg(feature = "complex")]
 impl<'a, F> ToPython<Py<PyComplex>> for &'a Complex<F>
 where
-    F: Copy + Into<c_double>,
+    F: Copy + Float + FloatConst + Into<c_double>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyComplex>> {
         Ok(PyComplex::from_complex(py, **self).into_py(py))
@@ -138,7 +140,7 @@ where
 #[cfg(feature = "complex")]
 impl<F> ToPython<Py<PyComplex>> for Complex<F>
 where
-    F: Copy + Into<c_double>,
+    F: Copy + Float + FloatConst + Into<c_double>,
 {
     fn to_python(&self, py: Python) -> PyResult<Py<PyComplex>> {
         <&Self as ToPython<Py<PyComplex>>>::to_python(&self, py)
