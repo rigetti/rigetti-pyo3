@@ -119,6 +119,7 @@ macro_rules! private_impl_py_try_from_pyany {
 #[allow(clippy::module_name_repetitions)]
 macro_rules! private_impl_py_try_from {
     (&$item: ident, $py: ident, $py_type: ty => $rs_type: ty $convert: block) => {
+        #[allow(clippy::use_self)]
         impl $crate::PyTryFrom<$py_type> for $rs_type {
             fn py_try_from(
                 $py: $crate::pyo3::Python,
@@ -151,7 +152,7 @@ macro_rules! impl_try_from_py_native {
 }
 
 /// Implements [`PyTryFrom<T>`] for a `T` that is a native Python type.
-macro_rules! impl_try_from_self {
+macro_rules! impl_try_from_self_python {
     ($py_type: ty) => {
         private_impl_py_try_from!(&item, py, $py_type => $crate::pyo3::Py<$py_type> {
             Ok(item.into_py(py))
@@ -162,11 +163,20 @@ macro_rules! impl_try_from_self {
     }
 }
 
+/// Implements [`PyTryFrom<T>`] for a `T` that is a native Rust type.
+macro_rules! impl_try_from_self_rust {
+    ($rs_type: ty) => {
+        private_impl_py_try_from!(&item, _py, $rs_type => $rs_type {
+            Ok(item.clone())
+        });
+    }
+}
+
 /// Implements [`PyTryFrom`] for primitive types by just calling `extract()`.
 macro_rules! impl_try_from_primitive {
     ($py_type: ty => $rs_type: ty) => {
         private_impl_py_try_from_with_pyany!(&item, _py, $py_type => $rs_type { item.extract() });
-        private_impl_py_try_from!(&item, py, Py<$py_type> => $rs_type { item.extract(py) });
+        impl_try_from_py_native!($py_type => $rs_type);
     };
 }
 
@@ -174,16 +184,13 @@ macro_rules! impl_try_from_primitive {
 
 // ==== Bool ====
 
-impl_try_from_self!(PyBool);
-impl_try_from_py_native!(PyBool => bool);
-
-private_impl_py_try_from_with_pyany!(&item, _py, PyBool => bool {
-    Ok(item.is_true())
-});
+impl_try_from_primitive!(PyBool => bool);
+impl_try_from_self_python!(PyBool);
+impl_try_from_self_rust!(bool);
 
 // ==== ByteArray ====
 
-impl_try_from_self!(PyByteArray);
+impl_try_from_self_python!(PyByteArray);
 impl_try_from_py_native!(PyByteArray => Vec<u8>);
 private_impl_py_try_from!(&item, _py, PyByteArray => Vec<u8> {
     Ok(item.to_vec())
@@ -196,7 +203,7 @@ private_impl_py_try_from!(&item, py, PyByteArray => Box<[u8]> {
 
 // ==== Bytes ====
 
-impl_try_from_self!(PyBytes);
+impl_try_from_self_python!(PyBytes);
 impl_try_from_py_native!(PyBytes => Vec<u8>);
 private_impl_py_try_from!(&item, _py, PyBytes => Vec<u8> {
     Ok(item.as_bytes().to_vec())
@@ -209,7 +216,17 @@ private_impl_py_try_from!(&item, py, PyBytes => Box<[u8]> {
 
 // ==== Complex ====
 
-impl_try_from_self!(PyComplex);
+impl_try_from_self_python!(PyComplex);
+
+#[cfg(feature = "complex")]
+impl<F> PyTryFrom<Self> for Complex<F>
+where
+    F: Copy + Float + FloatConst + Into<c_double> + Display,
+{
+    fn py_try_from(_py: Python, item: &Self) -> PyResult<Self> {
+        Ok(*item)
+    }
+}
 
 #[cfg(feature = "complex")]
 impl<F> PyTryFrom<Py<PyComplex>> for Complex<F>
@@ -259,7 +276,8 @@ where
 
 // ==== Date ====
 
-impl_try_from_self!(PyDate);
+impl_try_from_self_python!(PyDate);
+impl_try_from_self_rust!(Date);
 impl_try_from_py_native!(PyDate => Date);
 
 #[cfg(feature = "time")]
@@ -279,7 +297,8 @@ private_impl_py_try_from_with_pyany!(&item, py, PyDate => Date {
 
 // ==== DateTime ====
 
-impl_try_from_self!(PyDateTime);
+impl_try_from_self_python!(PyDateTime);
+impl_try_from_self_rust!(DateTime);
 impl_try_from_py_native!(PyDateTime => DateTime);
 
 #[cfg(feature = "time")]
@@ -301,7 +320,10 @@ private_impl_py_try_from_with_pyany!(&item, py, PyDateTime => DateTime {
 
 // ==== Delta ====
 
-impl_try_from_self!(PyDelta);
+impl_try_from_self_python!(PyDelta);
+
+#[cfg(feature = "time")]
+impl_try_from_self_rust!(Duration);
 
 #[cfg(feature = "time")]
 impl_try_from_py_native!(PyDelta => Duration);
@@ -323,6 +345,7 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyDelta => Duration {
     Ok(Self::new(seconds, nanoseconds))
 });
 
+impl_try_from_self_rust!(std::time::Duration);
 impl_try_from_py_native!(PyDelta => std::time::Duration);
 
 private_impl_py_try_from!(&item, _py, PyDelta => std::time::Duration {
@@ -343,7 +366,24 @@ private_impl_py_try_from!(&item, _py, PyDelta => std::time::Duration {
 
 // ==== Dict ====
 
-impl_try_from_self!(PyDict);
+impl_try_from_self_python!(PyDict);
+
+impl<K1, K2, V1, V2, Hasher> PyTryFrom<HashMap<K1, V1>> for HashMap<K2, V2, Hasher>
+where
+    K2: Eq + std::hash::Hash + PyTryFrom<K1>,
+    V2: PyTryFrom<V1>,
+    Hasher: std::hash::BuildHasher + Default,
+{
+    fn py_try_from(py: Python, item: &HashMap<K1, V1>) -> PyResult<Self> {
+        item.iter()
+            .map(|(key, val)| {
+                let key = K2::py_try_from(py, key)?;
+                let val = V2::py_try_from(py, val)?;
+                Ok((key, val))
+            })
+            .collect()
+    }
+}
 
 impl<K, V, Hasher> PyTryFrom<Py<PyDict>> for HashMap<K, V, Hasher>
 where
@@ -382,6 +422,22 @@ where
     fn py_try_from(py: Python, item: &PyAny) -> PyResult<Self> {
         let dict: &PyDict = item.downcast()?;
         Self::py_try_from(py, dict)
+    }
+}
+
+impl<K1, K2, V1, V2> PyTryFrom<BTreeMap<K1, V1>> for BTreeMap<K2, V2>
+where
+    K2: Ord + PyTryFrom<K1>,
+    V2: PyTryFrom<V1>,
+{
+    fn py_try_from(py: Python, item: &BTreeMap<K1, V1>) -> PyResult<Self> {
+        item.iter()
+            .map(|(key, val)| {
+                let key = K2::py_try_from(py, key)?;
+                let val = V2::py_try_from(py, val)?;
+                Ok((key, val))
+            })
+            .collect()
     }
 }
 
@@ -424,13 +480,15 @@ where
 
 // ==== Float ====
 
-impl_try_from_self!(PyFloat);
+impl_try_from_self_python!(PyFloat);
+impl_try_from_self_rust!(f32);
+impl_try_from_self_rust!(f64);
 impl_try_from_primitive!(PyFloat => f32);
 impl_try_from_primitive!(PyFloat => f64);
 
 // ==== FrozenSet ====
 
-impl_try_from_self!(PyFrozenSet);
+impl_try_from_self_python!(PyFrozenSet);
 
 impl<T, Hasher> PyTryFrom<Py<PyFrozenSet>> for HashSet<T, Hasher>
 where
@@ -482,7 +540,17 @@ where
 
 // ==== Integer ====
 
-impl_try_from_self!(PyInt);
+impl_try_from_self_python!(PyInt);
+impl_try_from_self_rust!(i8);
+impl_try_from_self_rust!(i16);
+impl_try_from_self_rust!(i32);
+impl_try_from_self_rust!(i64);
+impl_try_from_self_rust!(i128);
+impl_try_from_self_rust!(u8);
+impl_try_from_self_rust!(u16);
+impl_try_from_self_rust!(u32);
+impl_try_from_self_rust!(u64);
+impl_try_from_self_rust!(u128);
 impl_try_from_primitive!(PyInt => i8);
 impl_try_from_primitive!(PyInt => i16);
 impl_try_from_primitive!(PyInt => i32);
@@ -496,7 +564,7 @@ impl_try_from_primitive!(PyInt => u128);
 
 // ==== List ====
 
-impl_try_from_self!(PyList);
+impl_try_from_self_python!(PyList);
 
 impl<P, T> PyTryFrom<Vec<P>> for Vec<T>
 where
@@ -584,7 +652,17 @@ where
 
 // ==== Set ====
 
-impl_try_from_self!(PySet);
+impl_try_from_self_python!(PySet);
+
+impl<T, P, Hasher> PyTryFrom<HashSet<P, Hasher>> for HashSet<T, Hasher>
+where
+    T: Eq + std::hash::Hash + PyTryFrom<P>,
+    Hasher: std::hash::BuildHasher + Default,
+{
+    fn py_try_from(py: Python, set: &HashSet<P, Hasher>) -> PyResult<Self> {
+        set.iter().map(|item| T::py_try_from(py, item)).collect()
+    }
+}
 
 impl<T, Hasher> PyTryFrom<Py<PySet>> for HashSet<T, Hasher>
 where
@@ -619,6 +697,15 @@ where
     fn py_try_from(py: Python, item: &PyAny) -> PyResult<Self> {
         let set: &PySet = item.downcast()?;
         Self::py_try_from(py, set)
+    }
+}
+
+impl<T, P> PyTryFrom<BTreeSet<P>> for BTreeSet<T>
+where
+    T: Ord + PyTryFrom<P>,
+{
+    fn py_try_from(py: Python, set: &BTreeSet<P>) -> PyResult<Self> {
+        set.iter().map(|item| T::py_try_from(py, item)).collect()
     }
 }
 
@@ -657,7 +744,8 @@ where
 
 // ==== String ====
 
-impl_try_from_self!(PyString);
+impl_try_from_self_python!(PyString);
+impl_try_from_self_rust!(String);
 impl_try_from_py_native!(PyString => String);
 
 private_impl_py_try_from_with_pyany!(&item, _py, PyString => String {
@@ -666,7 +754,8 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyString => String {
 
 // ==== Time ====
 
-impl_try_from_self!(PyTime);
+impl_try_from_self_python!(PyTime);
+impl_try_from_self_rust!((Time, Option<UtcOffset>));
 impl_try_from_py_native!(PyTime => (Time, Option<UtcOffset>));
 
 #[cfg(feature = "time")]
@@ -685,7 +774,8 @@ private_impl_py_try_from_with_pyany!(&item, py, PyTime => (Time, Option<UtcOffse
 
 // ==== TzInfo ====
 
-impl_try_from_self!(PyTzInfo);
+impl_try_from_self_python!(PyTzInfo);
+impl_try_from_self_rust!(UtcOffset);
 impl_try_from_py_native!(PyTzInfo => UtcOffset);
 
 #[cfg(feature = "time")]

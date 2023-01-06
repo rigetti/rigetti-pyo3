@@ -66,6 +66,7 @@ where
 #[macro_export]
 macro_rules! private_impl_to_python_for {
     (&$($lt: lifetime)? $self: ident, $py: ident, $rs_type: ty => $py_type: ty $convert: block) => {
+        #[allow(clippy::use_self)]
         impl$(<$lt>)? $crate::ToPython<$py_type> for $(&$lt)? $rs_type {
             fn to_python(&$self, $py: $crate::pyo3::Python<'_>) -> $crate::pyo3::PyResult<$py_type> {
                 $convert
@@ -97,15 +98,29 @@ macro_rules! impl_for_primitive {
     };
 }
 
+/// Implement `ToPython<Self>` for a given type.
+macro_rules! impl_for_self {
+    ($type: ty) => {
+        private_impl_to_python_with_reference!(&self, _py, $type => $type {
+            Ok(self.clone())
+        });
+    }
+}
+
 // ============ Begin Implementations ==============
 
 // ==== Bool ====
+
+impl_for_self!(bool);
+impl_for_self!(Py<PyBool>);
 
 private_impl_to_python_with_reference!(&self, py, bool => Py<PyBool> {
     Ok(PyBool::new(py, *self).into_py(py))
 });
 
 // ==== ByteArray ====
+
+impl_for_self!(Py<PyByteArray>);
 
 private_impl_to_python_for!(&'a self, py, [u8] => Py<PyByteArray> {
     Ok(PyByteArray::new(py, self).into_py(py))
@@ -117,6 +132,8 @@ private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyByteArray> {
 
 // ==== Bytes ====
 
+impl_for_self!(Py<PyBytes>);
+
 private_impl_to_python_for!(&'a self, py, [u8] => Py<PyBytes> {
     Ok(PyBytes::new(py, self).into_py(py))
 });
@@ -126,6 +143,9 @@ private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyBytes> {
 });
 
 // ==== Complex ====
+
+#[cfg(feature = "complex")]
+impl_for_self!(Py<PyComplex>);
 
 #[cfg(feature = "complex")]
 impl<'a, F> ToPython<Py<PyComplex>> for &'a Complex<F>
@@ -149,6 +169,8 @@ where
 
 // ==== Date ====
 
+impl_for_self!(Py<PyDate>);
+
 #[cfg(feature = "time")]
 private_impl_to_python_with_reference!(&self, py, Date => Py<PyDate> {
     let year: i32 = self.year();
@@ -158,6 +180,8 @@ private_impl_to_python_with_reference!(&self, py, Date => Py<PyDate> {
 });
 
 // ==== DateTime ====
+
+impl_for_self!(Py<PyDateTime>);
 
 #[cfg(feature = "time")]
 private_impl_to_python_with_reference!(&self, py, DateTime => Py<PyDateTime> {
@@ -200,6 +224,8 @@ private_impl_to_python_with_reference!(&self, py, OffsetDateTime => Py<PyDateTim
 
 // ==== Delta ====
 
+impl_for_self!(Py<PyDelta>);
+
 #[cfg(feature = "time")]
 private_impl_to_python_with_reference!(&self, py, Duration => Py<PyDelta> {
     let days: i32 = self.whole_days().try_into().map_err(|_| {
@@ -237,6 +263,8 @@ private_impl_to_python_with_reference!(&self, py, std::time::Duration => Py<PyDe
 });
 
 // ==== Dict ====
+
+impl_for_self!(Py<PyDict>);
 
 impl<'a, K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &'a HashMap<K1, V1, Hasher>
 where
@@ -352,6 +380,10 @@ where
 
 // ==== Float ====
 
+impl_for_self!(Py<PyFloat>);
+impl_for_self!(f32);
+impl_for_self!(f64);
+
 impl_for_primitive!(f32 => Py<PyFloat>);
 impl_for_primitive!(f64 => Py<PyFloat>);
 
@@ -403,6 +435,18 @@ where
 
 // ==== Integer ====
 
+impl_for_self!(Py<PyLong>);
+impl_for_self!(i8);
+impl_for_self!(i16);
+impl_for_self!(i32);
+impl_for_self!(i64);
+impl_for_self!(i128);
+impl_for_self!(u8);
+impl_for_self!(u16);
+impl_for_self!(u32);
+impl_for_self!(u64);
+impl_for_self!(u128);
+
 impl_for_primitive!(i8 => Py<PyLong>);
 impl_for_primitive!(i16 => Py<PyLong>);
 impl_for_primitive!(i32 => Py<PyLong>);
@@ -437,6 +481,8 @@ where
 }
 
 // ==== List ====
+
+impl_for_self!(Py<PyList>);
 
 impl<'a, T, P> ToPython<Vec<P>> for &'a [T]
 where
@@ -502,6 +548,8 @@ where
 }
 
 // ==== Set ====
+
+impl_for_self!(Py<PySet>);
 
 impl<'a, T, P, Hasher> ToPython<HashSet<P, Hasher>> for &'a HashSet<T, Hasher>
 where
@@ -598,6 +646,9 @@ where
 
 // ==== String ====
 
+impl_for_self!(Py<PyString>);
+impl_for_self!(String);
+
 private_impl_to_python_with_reference!(&self, py, str => Py<PyString> {
     Ok(PyString::new(py, self).into_py(py))
 });
@@ -607,6 +658,8 @@ private_impl_to_python_with_reference!(&self, py, String => Py<PyString> {
 });
 
 // ==== Time ====
+
+impl_for_self!(Py<PyTime>);
 
 #[cfg(feature = "time")]
 private_impl_to_python_with_reference!(&self, py, (Time, Option<UtcOffset>) => Py<PyTime> {
@@ -623,6 +676,8 @@ private_impl_to_python_with_reference!(&self, py, (Time, Option<UtcOffset>) => P
 });
 
 // ==== TzInfo ====
+
+impl_for_self!(Py<PyTzInfo>);
 
 #[cfg(feature = "time")]
 private_impl_to_python_with_reference!(&self, py, UtcOffset => Py<PyTzInfo> {
