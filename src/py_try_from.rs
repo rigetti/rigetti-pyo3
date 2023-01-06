@@ -290,6 +290,8 @@ private_impl_py_try_from_with_pyany!(&item, py, PyDateTime => DateTime {
 // ==== Delta ====
 
 impl_try_from_self!(PyDelta);
+
+#[cfg(feature = "time")]
 impl_try_from_py_native!(PyDelta => Duration);
 
 #[cfg(feature = "time")]
@@ -297,6 +299,24 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyDelta => Duration {
     let days: i64 = item.getattr("days")?.extract()?;
     let seconds: i64 = item.getattr("seconds")?.extract()?;
     let microseconds: i32 = item.getattr("microseconds")?.extract()?;
+    let nanoseconds = microseconds.checked_mul(1000).ok_or_else(|| {
+        PyValueError::new_err("Could not fit {microseconds} microseconds as nanoseconds into a 32-bit signed integer")
+    })?;
+    let day_seconds = days.checked_mul(24 * 60 * 60).ok_or_else(|| {
+        PyValueError::new_err("Could not fit {days} days as seconds into a 64-bit signed integer")
+    })?;
+    let seconds = seconds.checked_add(day_seconds).ok_or_else(|| {
+        PyValueError::new_err("Could not add {days} days and {seconds} seconds into a 64-bit signed integer")
+    })?;
+    Ok(Self::new(seconds, nanoseconds))
+});
+
+impl_try_from_py_native!(PyDelta => std::time::Duration);
+
+private_impl_py_try_from!(&item, _py, PyDelta => std::time::Duration {
+    let days: u64 = item.getattr("days")?.extract()?;
+    let seconds: u64 = item.getattr("seconds")?.extract()?;
+    let microseconds: u32 = item.getattr("microseconds")?.extract()?;
     let nanoseconds = microseconds.checked_mul(1000).ok_or_else(|| {
         PyValueError::new_err("Could not fit {microseconds} microseconds as nanoseconds into a 32-bit signed integer")
     })?;

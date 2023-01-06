@@ -214,6 +214,28 @@ private_impl_to_python_with_reference!(&self, py, Duration => Py<PyDelta> {
     PyDelta::new(py, days, seconds, microseconds, true).map(|delta| delta.into_py(py))
 });
 
+private_impl_to_python_with_reference!(&self, py, std::time::Duration => Py<PyDelta> {
+    /// The number of seconds in a day.
+    const DAY_FACTOR: u64 = 60 * 60 * 24;
+    let microseconds = self.as_micros() % 1_000_000;
+    let seconds = self.as_secs() % DAY_FACTOR;
+    let days = self.as_secs() / DAY_FACTOR;
+
+    let microseconds: i32 = microseconds.try_into().map_err(|_| {
+        PyValueError::new_err(format!("Cannot fit {microseconds} microseconds into a 32-bit signed integer"))
+    })?;
+
+    let seconds: i32 = seconds.try_into().map_err(|_| {
+        PyValueError::new_err(format!("Cannot fit {seconds} seconds into a 32-bit signed integer"))
+    })?;
+
+    let days: i32 = days.try_into().map_err(|_| {
+        PyValueError::new_err(format!("Cannot fit {days} days into a 32-bit signed integer"))
+    })?;
+
+    PyDelta::new(py, days, seconds, microseconds, true).map(|delta| delta.into_py(py))
+});
+
 // ==== Dict ====
 
 impl<'a, K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &'a HashMap<K1, V1, Hasher>
@@ -576,7 +598,7 @@ where
 
 // ==== String ====
 
-private_impl_to_python_for!(&'a self, py, str => Py<PyString> {
+private_impl_to_python_with_reference!(&self, py, str => Py<PyString> {
     Ok(PyString::new(py, self).into_py(py))
 });
 
