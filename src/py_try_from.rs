@@ -184,15 +184,27 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyBool => bool {
 // ==== ByteArray ====
 
 impl_try_from_self!(PyByteArray);
+impl_try_from_py_native!(PyByteArray => Vec<u8>);
 private_impl_py_try_from!(&item, _py, PyByteArray => Vec<u8> {
     Ok(item.to_vec())
+});
+
+impl_try_from_py_native!(PyByteArray => Box<[u8]>);
+private_impl_py_try_from!(&item, py, PyByteArray => Box<[u8]> {
+    Vec::<u8>::py_try_from(py, item).map(From::from)
 });
 
 // ==== Bytes ====
 
 impl_try_from_self!(PyBytes);
+impl_try_from_py_native!(PyBytes => Vec<u8>);
 private_impl_py_try_from!(&item, _py, PyBytes => Vec<u8> {
     Ok(item.as_bytes().to_vec())
+});
+
+impl_try_from_py_native!(PyBytes => Box<[u8]>);
+private_impl_py_try_from!(&item, py, PyBytes => Box<[u8]> {
+    Vec::<u8>::py_try_from(py, item).map(From::from)
 });
 
 // ==== Complex ====
@@ -521,6 +533,34 @@ where
 }
 
 impl<T> PyTryFrom<PyAny> for Vec<T>
+where
+    T: PyTryFrom<PyAny>,
+{
+    fn py_try_from(py: Python, item: &PyAny) -> PyResult<Self> {
+        let actual: &PyList = item.downcast()?;
+        Self::py_try_from(py, actual)
+    }
+}
+
+impl<T> PyTryFrom<Py<PyList>> for Box<[T]>
+where
+    T: PyTryFrom<PyAny>,
+{
+    fn py_try_from(py: Python, py_list: &Py<PyList>) -> PyResult<Self> {
+        Self::py_try_from(py, py_list.as_ref(py))
+    }
+}
+
+impl<T> PyTryFrom<PyList> for Box<[T]>
+where
+    T: PyTryFrom<PyAny>,
+{
+    fn py_try_from(py: Python, py_list: &PyList) -> PyResult<Self> {
+        Vec::py_try_from(py, py_list).map(From::from)
+    }
+}
+
+impl<T> PyTryFrom<PyAny> for Box<[T]>
 where
     T: PyTryFrom<PyAny>,
 {
