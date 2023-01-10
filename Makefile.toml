@@ -85,43 +85,36 @@
     args = ["deadlinks", "--check-http", "--check-intra-doc-links"]
 
 [tasks.deny]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "all"]
 
 [tasks.deny-advisories]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "advisories"]
 
 [tasks.deny-ban]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "ban"]
 
 [tasks.deny-bans]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "bans"]
 
 [tasks.deny-license]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "license"]
 
 [tasks.deny-licenses]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "licenses"]
 
 [tasks.deny-sources]
-    dependencies = ["merge-deny-config"]
     install_crate = "cargo-deny"
     command = "cargo"
     args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "sources"]
