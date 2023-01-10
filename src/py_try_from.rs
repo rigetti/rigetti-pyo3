@@ -14,20 +14,18 @@
 
 //! Unifying conversion traits from Python to Rust data.
 
-use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
-};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
+use pyo3::types::PyComplex;
+use pyo3::{
+    exceptions::PyValueError,
+    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
+};
 use pyo3::{
     types::{
         PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString,
     },
     FromPyObject, IntoPy, Py, PyAny, PyResult, Python,
-};
-use pyo3::types::PyComplex;
-use pyo3::{
-    exceptions::PyValueError,
-    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
 };
 
 #[cfg(feature = "complex")]
@@ -37,14 +35,14 @@ use num_traits::{Float, FloatConst};
 #[cfg(feature = "complex")]
 use pyo3::exceptions::PyFloatingPointError;
 #[cfg(feature = "complex")]
-use std::os::raw::c_double;
-#[cfg(feature = "complex")]
 use std::fmt::Display;
+#[cfg(feature = "complex")]
+use std::os::raw::c_double;
 
 #[cfg(feature = "time")]
 use crate::datetime::DateTime;
 #[cfg(feature = "time")]
-use pyo3::{ToPyObject, types::PyTuple};
+use pyo3::{types::PyTuple, ToPyObject};
 #[cfg(feature = "time")]
 use time::{Date, Duration, Month, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 

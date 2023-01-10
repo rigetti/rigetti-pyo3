@@ -18,15 +18,15 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::BuildHasher;
 
 use pyo3::conversion::IntoPy;
+use pyo3::types::PyComplex;
 use pyo3::types::{
     PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyList, PyLong, PySet, PyString,
 };
-use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
-use pyo3::types::PyComplex;
 use pyo3::{
     exceptions::PyValueError,
     types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
 };
+use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
 
 #[cfg(feature = "complex")]
 use num_complex::Complex;
