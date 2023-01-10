@@ -488,6 +488,7 @@ macro_rules! private_intermediate_try_from_python {
 /// use rigetti_pyo3::py_wrap_union_enum;
 /// use rigetti_pyo3::pyo3::prelude::*;
 /// use rigetti_pyo3::pyo3::types::*;
+/// use std::collections::HashSet;
 ///
 /// #[derive(Clone)]
 /// pub enum TestEnum {
@@ -495,6 +496,7 @@ macro_rules! private_intermediate_try_from_python {
 ///     String(String),
 ///     Integer(i32),
 ///     UInteger(u32),
+///     List(Vec<HashSet<String>>),
 ///     Mapping(std::collections::HashMap<String, String>),
 /// }
 ///
@@ -519,6 +521,9 @@ macro_rules! private_intermediate_try_from_python {
 ///         string: String => String => Py<PyString>,
 ///         int: Integer => Py<PyInt>,
 ///         uint: UInteger => Py<PyInt>,
+///         list: List => Py<PyList>,
+///         // Alternatively, in the case of `Vec<T>` where `T` does not have conversion to `PyAny`.
+///         // list: List => Vec<Py<PySet>> => Py<PyList>,
 ///         // Generates `from_dict`, `is_dict`, `as_dict`, `to_dict`
 ///         dict: Mapping => Py<PyDict>
 ///     }
