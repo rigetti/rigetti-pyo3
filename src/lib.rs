@@ -207,6 +207,7 @@ impl<T> PyWrapperMut for T where T: PyWrapper + AsMut<Self::Inner> {}
 macro_rules! create_init_submodule {
     (
         $(classes: [ $($class: ty),+ ],)?
+        $(consts: [ $($const: ident),+ ],)?
         $(errors: [ $($error: ty),+ ],)?
         $(funcs: [ $($func: path),+ ],)?
         $(submodules: [ $($mod_name: literal: $init_submod: path),+ ],)?
@@ -214,6 +215,9 @@ macro_rules! create_init_submodule {
         pub(crate) fn init_submodule(_name: &str, _py: $crate::pyo3::Python, m: &$crate::pyo3::types::PyModule) -> $crate::pyo3::PyResult<()> {
             $($(
             m.add_class::<$class>()?;
+            )+)?
+            $($(
+            m.add(::std::stringify!($const), $crate::ToPython::<$crate::pyo3::Py<$crate::pyo3::PyAny>>::to_python(&$const, _py)?)?;
             )+)?
             $($(
             m.add(std::stringify!($error), _py.get_type::<$error>())?;
