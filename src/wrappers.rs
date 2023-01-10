@@ -674,7 +674,34 @@ macro_rules! wrap_error {
     };
 }
 
-/// TODO
+/// Wraps a data struct and makes (some of) its fields available to Python.
+///
+/// # Implements
+///
+/// - Everything implemented by [`py_wrap_type`].
+/// - [`PyWrapperMut`](crate::PyWrapperMut).
+/// - `get_foo` and `set_foo` methods for field `foo`, which translate to `@property` and
+///   `@foo.setter` in Python, i.e. allowing access to the field as a property.
+///
+/// # Example
+///
+/// ```
+/// use rigetti_pyo3::pyo3::{Py, types::{PyInt, PyString}};
+/// use rigetti_pyo3::py_wrap_data_struct;
+///
+/// #[derive(Clone)]
+/// pub struct Person {
+///     pub name: String,
+///     pub age: u8,
+/// }
+///
+/// py_wrap_data_struct! {
+///     PyPerson(Person) as "Person" {
+///         name: String => Py<PyString>,
+///         age: u8 => Py<PyInt>
+///     }
+/// }
+/// ```
 #[macro_export]
 macro_rules! py_wrap_data_struct {
     (
