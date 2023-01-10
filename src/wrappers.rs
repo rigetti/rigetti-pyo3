@@ -327,15 +327,15 @@ macro_rules! py_wrap_simple_enum {
 ///         // Fallible transformation from Python type `P` to Rust type `T` where `Foo: From<T>`.
 ///         // Used to implement `TryFrom<P> for PyFoo`. Any errors returned must be `PyErr`.
 ///         py -> rs {
-///             py_dict: PyDict => Foo {
-///                 let bar = py_dict.get_item("bar").unwrap().extract().unwrap();
-///                 let baz = py_dict.get_item("baz").unwrap().extract().unwrap();
+///             py_dict: Py<PyDict> => Foo {
+///                 let bar = py_dict.as_ref(py).get_item("bar").unwrap().extract().unwrap();
+///                 let baz = py_dict.as_ref(py).get_item("baz").unwrap().extract().unwrap();
 ///                 Ok::<_, PyErr>(Foo { bar, baz })
 ///             },
-///             py_tuple: PyTuple => (String, f32) {
+///             py_tuple: Py<PyTuple> => (String, f32) {
 ///                 Ok::<_, PyErr>((
-///                     py_tuple.get_item(0).unwrap().extract().unwrap(),
-///                     py_tuple.get_item(1).unwrap().extract().unwrap(),
+///                     py_tuple.as_ref(py).get_item(0).unwrap().extract().unwrap(),
+///                     py_tuple.as_ref(py).get_item(1).unwrap().extract().unwrap(),
 ///                 ))
 ///             }
 ///         },
@@ -491,6 +491,7 @@ macro_rules! private_intermediate_try_from_python {
 ///
 /// #[derive(Clone)]
 /// pub enum TestEnum {
+///     Unit,
 ///     String(String),
 ///     Integer(i32),
 ///     UInteger(u32),
@@ -499,15 +500,27 @@ macro_rules! private_intermediate_try_from_python {
 ///
 /// py_wrap_union_enum! {
 ///     PyTestEnum(TestEnum) as "TestEnum" {
-///         // Syntax is (1): (2) => (3), where:
+///         // Syntax is (1): (2) [=> (3)] [=> (4)] [...], where:
 ///         // 1: The name used in generated methods
 ///         // 2: The name of the Rust enum variant
-///         // 3: The Python type the inner item must convert to
-///         string: String => PyString,
-///         int: Integer => PyInt,
-///         uint: UInteger => PyInt,
+///         // 3: The (Python) type the inner item must convert to (if it has associated data)
+///         // 4: The (Python) type the type from (3) must convert to, etc.
+///         unit: Unit,
+///         // Read as "give the name `string` to variant `String`, which must convert (from
+///         // a `String`) to a `String` and then to a `Py<PyString>`."
+///         //
+///         // That is, `string` is used to generate methods `is_string`, `from_string`, etc.;
+///         // the first `String` is the name of the variant, not the type (which is elided);
+///         // the second `String` is the type to convert the elided type into, and `Py<String>` is
+///         // the final type to convert into.
+///         //
+///         // This specifies an unnecessary conversion from String => String to illustrate
+///         // conversion chaining.
+///         string: String => String => Py<PyString>,
+///         int: Integer => Py<PyInt>,
+///         uint: UInteger => Py<PyInt>,
 ///         // Generates `from_dict`, `is_dict`, `as_dict`, `to_dict`
-///         dict: Mapping => PyDict
+///         dict: Mapping => Py<PyDict>
 ///     }
 /// }
 /// ```
@@ -562,16 +575,10 @@ macro_rules! py_wrap_union_enum {
                                 py,
                             ))
                         },)?
-                        // TODO: Allows for incomplete wrapper implementations. Helpful workaround
-                        // during dev, but may want to remove before merging
-                        _ => {
-                            use $crate::pyo3::exceptions::PyRuntimeError;
-                            Err(PyRuntimeError::new_err(format!("Enum variant {} unimplemented", stringify!($variant))))
-                        },
                     )+
                     _ => {
                         use $crate::pyo3::exceptions::PyRuntimeError;
-                        Err(PyRuntimeError::new_err("Enum has no inner data"))
+                        Err(PyRuntimeError::new_err("Enum variant has no inner data or is unimplemented"))
                     }
                 }
             }
