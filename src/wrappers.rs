@@ -130,6 +130,10 @@ macro_rules! py_wrap_type {
             Ok($name::from(self.clone()))
         });
 
+        $crate::private_impl_to_python_with_reference!(&self, py, $name => $crate::pyo3::Py<$crate::pyo3::PyAny> {
+            Ok(<Self as $crate::pyo3::ToPyObject>::to_object(self, py))
+        });
+
         impl From<$name> for $from {
             fn from(wrapper: $name) -> Self {
                 wrapper.0

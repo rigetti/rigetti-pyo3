@@ -65,6 +65,15 @@ where
     }
 }
 
+impl<T, P> PyTryFrom<P> for Box<T>
+where
+    T: PyTryFrom<P>,
+{
+    fn py_try_from(py: Python, item: &P) -> PyResult<Self> {
+        T::py_try_from(py, item).map(Self::new)
+    }
+}
+
 /// Provides a body for `py_try_from`, delegating to the implementation for the given Python type.
 ///
 /// This should be used in other macros and for generic/container types that can't be implemented
