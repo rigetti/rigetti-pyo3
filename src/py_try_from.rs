@@ -234,8 +234,6 @@ where
             ))
         };
         Ok(Self {
-            // TODO: FloatingPointError (not used by base Python but used by e.g. numpy)
-            // or ValueError?
             re: F::from(item.real()).ok_or_else(|| make_error(item.real()))?,
             im: F::from(item.imag()).ok_or_else(|| make_error(item.imag()))?,
         })
