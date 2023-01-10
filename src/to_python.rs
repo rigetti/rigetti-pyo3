@@ -22,23 +22,23 @@ use pyo3::types::{
     PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyList, PyLong, PySet, PyString,
 };
 use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
+use pyo3::types::PyComplex;
+use pyo3::{
+    exceptions::PyValueError,
+    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
+};
 
 #[cfg(feature = "complex")]
 use num_complex::Complex;
 #[cfg(feature = "complex")]
 use num_traits::{Float, FloatConst};
 #[cfg(feature = "complex")]
-use pyo3::types::PyComplex;
-#[cfg(feature = "complex")]
 use std::os::raw::c_double;
 
 #[cfg(feature = "time")]
 use crate::datetime::DateTime;
 #[cfg(feature = "time")]
-use pyo3::{
-    exceptions::PyValueError,
-    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTuple, PyTzInfo},
-};
+use pyo3::types::PyTuple;
 #[cfg(feature = "time")]
 use time::{Date, Duration, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 
@@ -144,7 +144,6 @@ private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyBytes> {
 
 // ==== Complex ====
 
-#[cfg(feature = "complex")]
 impl_for_self!(Py<PyComplex>);
 
 #[cfg(feature = "complex")]

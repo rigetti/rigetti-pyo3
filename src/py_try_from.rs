@@ -16,15 +16,18 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
-    fmt::Display,
 };
 
 use pyo3::{
-    exceptions::PyFloatingPointError,
     types::{
         PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString,
     },
     FromPyObject, IntoPy, Py, PyAny, PyResult, Python,
+};
+use pyo3::types::PyComplex;
+use pyo3::{
+    exceptions::PyValueError,
+    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
 };
 
 #[cfg(feature = "complex")]
@@ -32,18 +35,16 @@ use num_complex::Complex;
 #[cfg(feature = "complex")]
 use num_traits::{Float, FloatConst};
 #[cfg(feature = "complex")]
-use pyo3::types::PyComplex;
+use pyo3::exceptions::PyFloatingPointError;
 #[cfg(feature = "complex")]
 use std::os::raw::c_double;
+#[cfg(feature = "complex")]
+use std::fmt::Display;
 
 #[cfg(feature = "time")]
 use crate::datetime::DateTime;
 #[cfg(feature = "time")]
-use pyo3::{
-    exceptions::PyValueError,
-    types::{PyDate, PyDateTime, PyDelta, PyTime, PyTuple, PyTzInfo},
-    ToPyObject,
-};
+use pyo3::{ToPyObject, types::PyTuple};
 #[cfg(feature = "time")]
 use time::{Date, Duration, Month, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 
@@ -257,7 +258,10 @@ where
 // ==== Date ====
 
 impl_try_from_self_python!(PyDate);
+
+#[cfg(feature = "time")]
 impl_try_from_self_rust!(Date);
+#[cfg(feature = "time")]
 impl_try_from_py_native!(PyDate => Date);
 
 #[cfg(feature = "time")]
@@ -278,7 +282,10 @@ private_impl_py_try_from_with_pyany!(&item, py, PyDate => Date {
 // ==== DateTime ====
 
 impl_try_from_self_python!(PyDateTime);
+
+#[cfg(feature = "time")]
 impl_try_from_self_rust!(DateTime);
+#[cfg(feature = "time")]
 impl_try_from_py_native!(PyDateTime => DateTime);
 
 #[cfg(feature = "time")]
@@ -735,7 +742,10 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyString => String {
 // ==== Time ====
 
 impl_try_from_self_python!(PyTime);
+
+#[cfg(feature = "time")]
 impl_try_from_self_rust!((Time, Option<UtcOffset>));
+#[cfg(feature = "time")]
 impl_try_from_py_native!(PyTime => (Time, Option<UtcOffset>));
 
 #[cfg(feature = "time")]
@@ -755,7 +765,10 @@ private_impl_py_try_from_with_pyany!(&item, py, PyTime => (Time, Option<UtcOffse
 // ==== TzInfo ====
 
 impl_try_from_self_python!(PyTzInfo);
+
+#[cfg(feature = "time")]
 impl_try_from_self_rust!(UtcOffset);
+#[cfg(feature = "time")]
 impl_try_from_py_native!(PyTzInfo => UtcOffset);
 
 #[cfg(feature = "time")]
