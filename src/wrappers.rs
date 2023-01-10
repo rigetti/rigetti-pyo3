@@ -363,16 +363,16 @@ macro_rules! py_wrap_struct {
             /// Used to implement `TryFrom<P> for PyFoo`. Any errors returned must be `PyErr`.
             ///
             /// $py_for_from should conventionally be `py` -- it is the name of the `Python<'_>` parameter.
-            $py_for_from: ident -> rs {
+            $($py_for_from: ident -> rs {
                 $($py_ident: ident: $py_src: ty => $rs_dest: ty $to_rs: block),+
-            },
+            },)?
             /// Fallible transformation from Rust type `T` to Python type `P` where `T: From<Foo>`
             /// Used to implement `TryFrom<PyFoo> for P`. Any errors returned must be `PyErr`.
             ///
             /// $py_for_to should conventionally be `py` -- it is the name of the `Python<'_>` parameter.
-            rs -> $py_for_to: ident {
+            $(rs -> $py_for_to: ident {
                 $($rs_ident: ident: $rs_src: ty => $py_dest: ty $to_py: block),+
-            }
+            })?
         }
     ) => {
         $crate::py_wrap_type! {
@@ -382,7 +382,7 @@ macro_rules! py_wrap_struct {
             $name($rs_from) $(as $py_class)?;
         }
 
-        $(
+        $($(
         impl TryFrom<$py_src> for $name {
             #[allow(unused_qualifications)]
             type Error = pyo3::PyErr;
@@ -395,9 +395,9 @@ macro_rules! py_wrap_struct {
                 })
             }
         }
-        )+
+        )+)?
 
-        $(
+        $($(
         impl TryFrom<$name> for $py_dest {
             #[allow(unused_qualifications)]
             type Error = pyo3::PyErr;
@@ -409,7 +409,7 @@ macro_rules! py_wrap_struct {
                 })
             }
         }
-        )+
+        )+)?
 
         $crate::impl_as_mut_for_wrapper!($name);
 
@@ -421,14 +421,14 @@ macro_rules! py_wrap_struct {
             pub fn new(py: $crate::pyo3::Python, input: $crate::pyo3::Py<$crate::pyo3::PyAny>) -> $crate::pyo3::PyResult<Self> {
                 use $crate::pyo3::FromPyObject;
 
-                $(
+                $($(
                 if let Ok(item) = input.extract::<$py_src>(py) {
                     return Self::try_from(item);
                 }
-                )+
+                )+)?
 
                 Err($crate::pyo3::exceptions::PyValueError::new_err(
-                    concat!("expected one of:" $(, " ", std::stringify!($py_src))+)
+                    concat!("expected one of:" $($(, " ", std::stringify!($py_src))+)?)
                 ))
             }
         }
