@@ -24,7 +24,7 @@ use pyo3::{
     types::{
         PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString,
     },
-    FromPyObject, IntoPy, Py, PyAny, PyClass, PyResult, Python,
+    FromPyObject, IntoPy, Py, PyAny, PyResult, Python,
 };
 
 #[cfg(feature = "complex")]
@@ -38,7 +38,6 @@ use std::os::raw::c_double;
 
 #[cfg(feature = "time")]
 use crate::datetime::DateTime;
-use crate::PyWrapper;
 #[cfg(feature = "time")]
 use pyo3::{
     exceptions::PyValueError,
@@ -58,16 +57,6 @@ pub trait PyTryFrom<P>: Sized {
     fn py_try_from(py: Python, item: &P) -> PyResult<Self>;
 }
 
-impl<T, P> PyTryFrom<Py<P>> for T
-where
-    P: PyWrapper<Inner = T> + Clone + PyClass,
-{
-    fn py_try_from(py: Python, item: &Py<P>) -> PyResult<Self> {
-        let item: P = item.extract(py)?;
-        Ok(item.into_inner())
-    }
-}
-
 impl<P> PyTryFrom<PyAny> for Py<P>
 where
     Self: for<'a> FromPyObject<'a>,
@@ -76,15 +65,6 @@ where
         item.extract()
     }
 }
-
-//impl<T> PyTryFrom<PyAny> for Py<T>
-//where
-//    Self: for<'a> FromPyObject<'a>,
-//{
-//    fn py_try_from(_py: Python, item: &PyAny) -> PyResult<Self> {
-//        item.extract()
-//    }
-//}
 
 /// Provides a body for `py_try_from`, delegating to the implementation for the given Python type.
 ///
