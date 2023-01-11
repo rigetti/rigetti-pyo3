@@ -52,6 +52,16 @@ pub trait ToPython<P: ToPyObject> {
     fn to_python(&self, py: Python) -> PyResult<P>;
 }
 
+impl<'a, T, P> ToPython<P> for &'a Box<T>
+where
+    T: ToPython<P>,
+    P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<P> {
+        T::to_python(self, py)
+    }
+}
+
 impl<T, P> ToPython<P> for Box<T>
 where
     T: ToPython<P>,
