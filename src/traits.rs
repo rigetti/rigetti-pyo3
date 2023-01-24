@@ -61,7 +61,7 @@ macro_rules! impl_hash {
         impl $name {
             pub fn __hash__(&self) -> isize {
                 let mut hasher = ::std::collections::hash_map::DefaultHasher::new();
-                ::std::hash::Hash::hash(self, &mut hasher);
+                ::std::hash::Hash::hash($crate::PyWrapper::as_inner(self), &mut hasher);
                 let bytes = ::std::hash::Hasher::finish(&hasher).to_ne_bytes();
                 isize::from_ne_bytes(bytes)
             }
