@@ -692,6 +692,51 @@ macro_rules! wrap_error {
 /// - `get_foo` and `set_foo` methods for field `foo`, which translate to `@property` and
 ///   `@foo.setter` in Python, i.e. allowing access to the field as a property.
 ///
+/// # Warning!
+///
+/// The mutability of exposed fields may not work as you expect.
+///
+/// Since objects are converted back and forth along the FFI boundary using `Clone`s,
+/// pointers are not shared like in native Python. In native Python, this code runs
+/// without issue:
+///
+/// ```python
+/// class Test:
+///   def __init__(self):
+///       self.inner = {}
+///
+///   @property
+///   def foo(self):
+///     return self.inner
+///
+///   @foo.setter
+///   def foo(self, value):
+///     self.inner = value
+///
+/// c = Test()
+/// d = c.inner
+///
+/// d["a"] = ["a"]
+/// assert "a" in c.inner
+///
+/// d = c.foo
+/// d["b"] = "b"
+/// assert "b" in c.inner
+/// ```
+///
+/// Using these bindings, assuming that this macro was used to create `Test`, the
+/// equivalent would be:
+///
+/// ```python
+/// c = Test()
+/// d = c.foo
+///
+/// d["a"] = ["a"]
+/// assert "a" not in c.foo
+/// c.foo = d
+/// assert "a" in c.foo
+/// ```
+///
 /// # Example
 ///
 /// ```
