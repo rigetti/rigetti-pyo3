@@ -105,12 +105,12 @@ pub mod python {
         Clippers, CloggedClippersError as RustCloggedClippers, CuttingTool, Shears, Yak,
     };
     use pyo3::exceptions::PyRuntimeError;
-    use pyo3::types::{PyBool, PyDict};
+    use pyo3::types::{PyBool, PyDict, PyInt};
     use pyo3::{pymethods, IntoPy, Py, PyErr, PyResult, Python};
     use rigetti_pyo3::{
-        create_init_submodule, impl_as_mut_for_wrapper, py_wrap_error, py_wrap_struct,
-        py_wrap_type, py_wrap_union_enum, PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
-        ToPythonError,
+        create_init_submodule, impl_as_mut_for_wrapper, py_wrap_data_struct, py_wrap_error,
+        py_wrap_struct, py_wrap_type, py_wrap_union_enum, PyTryFrom, PyWrapper, PyWrapperMut,
+        ToPython, ToPythonError,
     };
 
     create_init_submodule! {
@@ -126,6 +126,19 @@ pub mod python {
         CloggedClippersError,
         PyRuntimeError
     );
+
+    #[derive(Clone)]
+    struct YakQueue {
+        length: usize,
+        eta_ms: i64,
+    }
+
+    py_wrap_data_struct! {
+        PyYakQueue(YakQueue) as "YakQueue" {
+            length: usize => Py<PyInt>,
+            eta_ms: i64 => Py<PyInt>
+        }
+    }
 
     // Don't need to manually convert between `Yak` and `PyYak` -- use conversion blocks for
     // building from other types.
