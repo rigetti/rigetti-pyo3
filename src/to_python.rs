@@ -544,6 +544,7 @@ impl_for_self!(u16);
 impl_for_self!(u32);
 impl_for_self!(u64);
 impl_for_self!(u128);
+impl_for_self!(usize);
 
 impl_for_primitive!(i8 => Py<PyLong>);
 impl_for_primitive!(i16 => Py<PyLong>);
@@ -555,6 +556,7 @@ impl_for_primitive!(u16 => Py<PyLong>);
 impl_for_primitive!(u32 => Py<PyLong>);
 impl_for_primitive!(u64 => Py<PyLong>);
 impl_for_primitive!(u128 => Py<PyLong>);
+impl_for_primitive!(usize => Py<PyLong>);
 
 // ==== Optional[T] ====
 
