@@ -538,21 +538,25 @@ impl_try_from_self_rust!(i16);
 impl_try_from_self_rust!(i32);
 impl_try_from_self_rust!(i64);
 impl_try_from_self_rust!(i128);
+impl_try_from_self_rust!(isize);
 impl_try_from_self_rust!(u8);
 impl_try_from_self_rust!(u16);
 impl_try_from_self_rust!(u32);
 impl_try_from_self_rust!(u64);
 impl_try_from_self_rust!(u128);
+impl_try_from_self_rust!(usize);
 impl_try_from_primitive!(PyInt => i8);
 impl_try_from_primitive!(PyInt => i16);
 impl_try_from_primitive!(PyInt => i32);
 impl_try_from_primitive!(PyInt => i64);
 impl_try_from_primitive!(PyInt => i128);
+impl_try_from_primitive!(PyInt => isize);
 impl_try_from_primitive!(PyInt => u8);
 impl_try_from_primitive!(PyInt => u16);
 impl_try_from_primitive!(PyInt => u32);
 impl_try_from_primitive!(PyInt => u64);
 impl_try_from_primitive!(PyInt => u128);
+impl_try_from_primitive!(PyInt => usize);
 
 // ==== List ====
 
