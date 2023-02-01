@@ -190,6 +190,10 @@ macro_rules! py_wrap_type {
 ///
 /// - `$variant_name`: comma-separated list of variant names on the Rust enum. Required because
 ///   there is no way to do reflection to programmatically find them.
+/// - `$variant_alias`: used in conjunction with `$variant_name` as the Python enum member name
+///   when it should be named differently, useful in cases when the enum member name is not a
+///   valid python identifier. If one variant uses an alias, they all must, even if the alias
+///   is the same as the name.
 /// - See also [`py_wrap_type`].
 ///
 /// # Example
@@ -209,6 +213,13 @@ macro_rules! py_wrap_type {
 ///         Bar
 ///     }
 /// }
+///
+/// py_wrap_simple_enum! {
+///     PyEnumAliased(RustEnum) {
+///         Foo as FOO,
+///         Bar as Bar
+///     }
+/// }
 /// ```
 #[macro_export]
 macro_rules! py_wrap_simple_enum {
@@ -218,12 +229,25 @@ macro_rules! py_wrap_simple_enum {
             $($variant_name: ident),+
         }
     ) => {
+        $crate::py_wrap_simple_enum!(
+            $(#[$meta])*
+            $name($rs_inner) $(as $py_class)? {
+                $($variant_name as $variant_name),+
+            }
+        )
+    };
+    (
+        $(#[$meta: meta])*
+        $name: ident($rs_inner: ident) $(as $py_class: literal)? {
+            $($variant_name: ident as $variant_alias: ident),+
+        }
+    ) => {
         #[derive(Copy, Clone)]
         #[$crate::pyo3::pyclass$((name = $py_class))?]
         $(#[$meta])*
         pub enum $name {
             $(
-            $variant_name
+            $variant_alias
             ),+
         }
 
@@ -231,7 +255,7 @@ macro_rules! py_wrap_simple_enum {
             fn from(item: $name) -> Self {
                 match item {
                     $(
-                    $name::$variant_name => Self::$variant_name,
+                    $name::$variant_alias => Self::$variant_name,
                     )+
                 }
             }
@@ -247,7 +271,7 @@ macro_rules! py_wrap_simple_enum {
             fn from(item: $rs_inner) -> Self {
                 match item {
                     $(
-                    $rs_inner::$variant_name => $name::$variant_name,
+                    $rs_inner::$variant_name => $name::$variant_alias,
                     )+
                 }
             }
@@ -267,7 +291,7 @@ macro_rules! py_wrap_simple_enum {
             fn as_ref(&self) -> &$rs_inner {
                 match self {
                     $(
-                    $name::$variant_name => &$rs_inner::$variant_name,
+                    $name::$variant_alias => &$rs_inner::$variant_name,
                     )+
                 }
             }
