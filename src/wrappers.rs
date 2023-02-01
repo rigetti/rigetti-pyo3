@@ -286,7 +286,7 @@ macro_rules! py_wrap_simple_enum {
         });
 
         $crate::private_impl_py_try_from!(&item, _py, $name => $rs_inner {
-            Ok(item.as_ref().clone())
+            Ok(*item.as_ref())
         });
     }
 }
