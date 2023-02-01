@@ -53,10 +53,10 @@ fn wrapper_tests(py: Python<'_>, m: &PyModule) -> PyResult<()> {
 }
 
 #[test]
-fn test_enum_as_data_struct_member() -> PyResult<()> {
+fn test_enum_as_data_struct_member() {
     pyo3::append_to_inittab!(wrapper_tests);
     pyo3::prepare_freethreaded_python();
-    Python::with_gil(|py| {
+    let result: PyResult<()> = Python::with_gil(|py| {
         let code = r#"
 from wrapper_tests import TestEnum, TestStruct
 
@@ -71,5 +71,7 @@ assert struct.test_enum == TestEnum.Two
         PyModule::from_code(py, code, "example.py", "example")?;
 
         Ok(())
-    })
+    });
+
+    assert!(result.is_ok());
 }
