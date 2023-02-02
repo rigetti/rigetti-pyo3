@@ -229,12 +229,12 @@ macro_rules! py_wrap_simple_enum {
             $($variant_name: ident),+
         }
     ) => {
-        $crate::py_wrap_simple_enum!(
+        $crate::py_wrap_simple_enum! {
             $(#[$meta])*
             $name($rs_inner) $(as $py_class)? {
                 $($variant_name as $variant_name),+
             }
-        )
+        }
     };
     (
         $(#[$meta: meta])*

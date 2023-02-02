@@ -9,7 +9,8 @@ pub mod rust {
 
     #[derive(Clone, Copy)]
     pub struct TestStruct {
-        pub test_enum: TestEnum,
+        pub test_enum_unaliased: TestEnum,
+        pub test_enum_aliased: TestEnum,
     }
 }
 
@@ -20,19 +21,27 @@ pub mod python {
     use rigetti_pyo3::{create_init_submodule, py_wrap_data_struct, py_wrap_simple_enum};
 
     create_init_submodule! {
-        classes: [ PyTestEnum, PyTestStruct ],
+        classes: [ PyTestEnumUnaliased, PyTestEnumAliased, PyTestStruct ],
     }
 
     py_wrap_simple_enum! {
-        PyTestEnum(TestEnum) as "TestEnum" {
+        PyTestEnumUnaliased(TestEnum) as "TestEnumUnaliased" {
             One,
             Two
         }
     }
 
+    py_wrap_simple_enum! {
+        PyTestEnumAliased(TestEnum) as "TestEnumAliased" {
+            One as NONE,
+            Two as Two
+        }
+    }
+
     py_wrap_data_struct! {
         PyTestStruct(TestStruct) as "TestStruct" {
-            test_enum: TestEnum => PyTestEnum
+            test_enum_unaliased: TestEnum => PyTestEnumUnaliased,
+            test_enum_aliased: TestEnum => PyTestEnumAliased
         }
     }
 
@@ -41,7 +50,8 @@ pub mod python {
         #[new]
         fn __new__() -> Self {
             Self(TestStruct {
-                test_enum: TestEnum::One,
+                test_enum_unaliased: TestEnum::One,
+                test_enum_aliased: TestEnum::One,
             })
         }
     }
@@ -58,15 +68,18 @@ fn test_enum_as_data_struct_member() {
     pyo3::prepare_freethreaded_python();
     let result: PyResult<()> = Python::with_gil(|py| {
         let code = r#"
-from wrapper_tests import TestEnum, TestStruct
+from wrapper_tests import TestEnumUnaliased, TestEnumAliased, TestStruct
 
 struct = TestStruct()
 
-assert struct.test_enum == TestEnum.One
+assert struct.test_enum_unaliased == TestEnumUnaliased.One
+assert struct.test_enum_aliased == TestEnumAliased.NONE
 
-struct.test_enum = TestEnum.Two
+struct.test_enum_unaliased = TestEnumUnaliased.Two
+struct.test_enum_aliased = TestEnumAliased.Two
 
-assert struct.test_enum == TestEnum.Two
+assert struct.test_enum_unaliased == TestEnumUnaliased.Two
+assert struct.test_enum_aliased == TestEnumAliased.Two
 "#;
         PyModule::from_code(py, code, "example.py", "example")?;
 
