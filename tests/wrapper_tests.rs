@@ -73,5 +73,5 @@ assert struct.test_enum == TestEnum.Two
         Ok(())
     });
 
-    assert!(result.is_ok());
+    result.expect("python code should execute without issue")
 }
