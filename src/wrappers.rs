@@ -304,6 +304,14 @@ macro_rules! py_wrap_simple_enum {
                 cell.to_object(py)
             }
         }
+
+        $crate::private_impl_to_python_with_reference!(&self, _py, $rs_inner => $name {
+            Ok($name::from(self))
+        });
+
+        $crate::private_impl_py_try_from!(&item, _py, $name => $rs_inner {
+            Ok(*item.as_ref())
+        });
     }
 }
 
