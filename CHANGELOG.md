@@ -1,3 +1,20 @@
+## 0.1.0-rc.4
+
+### Breaking Changes
+
+- support fieldless enums and data structs
+
+### Features
+
+- implement ToPython and PyTryFrom in py_wrap_simple_enum (#8)
+- add variant name aliasing to py_wrap_simple_enum
+- add isize conversion for good measure
+
+### Fixes
+
+- no py_wrap_simple_enum branches should be expanding items (#10)
+- add usize to py_try_from and to_python
+
 ## 0.1.0-rc.3
 
 ### Breaking Changes
