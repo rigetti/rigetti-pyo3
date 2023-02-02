@@ -1,3 +1,18 @@
+## 0.1.0-rc.2
+
+### Breaking Changes
+
+- support fieldless enums and data structs
+
+### Features
+
+- add variant name aliasing to py_wrap_simple_enum
+- add isize conversion for good measure
+
+### Fixes
+
+- add usize to py_try_from and to_python
+
 ## 0.1.0-rc.1
 
 ### Breaking Changes
