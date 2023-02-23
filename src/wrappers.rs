@@ -70,6 +70,9 @@ macro_rules! py_wrap_error {
 /// - `$name`: The Rust name for the wrapper type (usually `PySomething`).
 /// - `$from`: The Rust type to wrap.
 /// - `$py_alias` (optional): The type name to expose to Python (usually `$name` without a leading `Py`).
+/// - `$pyclass_param` (optional): A list of parameters to pass to #[pyclass(...)]. The `name`
+/// parameter should not be used as it overlaps with `$py_alias`.
+/// - `$pyclass_value` (optional): A value associated with a `$pyclass_param`.
 ///
 /// ```
 /// use std::collections::HashMap;
@@ -90,11 +93,11 @@ macro_rules! py_wrap_error {
 macro_rules! py_wrap_type {
     (
         $(#[$meta: meta])*
-        $name: ident($from: ty)$(as $py_alias: literal)?$(;)?
+        $name: ident($from: ty)$(as $py_alias: literal)? $(with $( $pyclass_meta: ident $(= $pyclass_value: literal)?),+ )?$(;)?
     ) => {
         #[repr(transparent)]
         #[allow(clippy::use_self)]
-        #[$crate::pyo3::pyclass$((name = $py_alias))?]
+        #[$crate::pyo3::pyclass($($($pyclass_meta $(= $pyclass_value)?),+ , )?$(name = $py_alias)?)]
         #[derive(Clone)]
         $(#[$meta])*
         pub struct $name($from);
@@ -394,7 +397,7 @@ macro_rules! py_wrap_simple_enum {
 macro_rules! py_wrap_struct {
     (
         $(#[$meta: meta])*
-        $name: ident($rs_from: ty) $(as $py_class: literal)? {
+        $name: ident($rs_from: ty) $(as $py_class: literal)? $(with $( $pyclass_meta: ident$( = $pyclass_value: literal)?),+ )? {
             /// Fallible transformation from Python type `P` to Rust type `T` where `Foo: From<T>`.
             /// Used to implement `TryFrom<P> for PyFoo`. Any errors returned must be `PyErr`.
             ///
@@ -415,7 +418,7 @@ macro_rules! py_wrap_struct {
             $(
             #[$meta]
             )*
-            $name($rs_from) $(as $py_class)?;
+            $name($rs_from) $(as $py_class)? $(with $($pyclass_meta $( = $pyclass_value)?),+ )?;
         }
 
         $($(
@@ -569,13 +572,13 @@ macro_rules! private_intermediate_try_from_python {
 macro_rules! py_wrap_union_enum {
     (
         $(#[$meta: meta])*
-        $name: ident($rs_inner: ident) $(as $py_class: literal)? {
+        $name: ident($rs_inner: ident) $(as $py_class: literal)? $(with $( $pyclass_meta: ident$( = $pyclass_value: literal)?),+ )? {
             $($variant_name: ident: $variant: ident $($(=> $convert: ty)+)?),+
         }
     ) => {
         $crate::py_wrap_type! {
             $(#[$meta])*
-            $name($rs_inner) $(as $py_class)?;
+            $name($rs_inner) $(as $py_class)? $(with $($pyclass_meta $( = $pyclass_value)?),+ )?;
         }
 
         $crate::impl_as_mut_for_wrapper!($name);
@@ -792,7 +795,7 @@ macro_rules! wrap_error {
 macro_rules! py_wrap_data_struct {
     (
         $(#[$meta: meta])*
-        $name: ident($rs_inner: ty) $(as $class_name: literal)? {
+        $name: ident($rs_inner: ty) $(as $class_name: literal)? $(with $( $pyclass_meta: ident$( = $pyclass_value: literal)?),+ )? {
             $(
             $field_name: ident: $field_rs_type: ty $(=> $convert: ty)+
             ),+
@@ -802,7 +805,7 @@ macro_rules! py_wrap_data_struct {
             $(
             #[$meta]
             )*
-            $name($rs_inner) $(as $class_name)?;
+            $name($rs_inner) $(as $class_name)? $(with $($pyclass_meta $( = $pyclass_value)?),+ )?;
         }
 
         $crate::impl_as_mut_for_wrapper!($name);
