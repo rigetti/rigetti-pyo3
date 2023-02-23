@@ -567,6 +567,51 @@ macro_rules! private_intermediate_try_from_python {
 /// ```
 #[macro_export]
 macro_rules! py_wrap_union_enum {
+    // @from creates its own impl block to avoid an error of "cannot find attribute `staticmethod`
+    // in this scope".
+    //
+    // There may be a performance hit to this, but I (@Shadow53) cannot figure out how to do this
+    // otherwise without rewriting everything as procedural macros.
+    //
+    // Note: the cause of the error was the use of `paste!` *within* a `pymethods` impl block.
+    // Having the impl block within the `paste!` macro is what makes the error go away.
+    (@from $name: ident, $rs_enum: ident, $variant_name: ident, $variant: ident $(=> $convert: ty)+) => {
+        $crate::paste::paste! {
+            #[$crate::pyo3::pymethods]
+            impl $name {
+                #[staticmethod]
+                pub fn [< from_ $variant_name >](py: $crate::pyo3::Python, inner: $crate::private_ultimate_type!($($convert),+)) -> $crate::pyo3::PyResult<Self> {
+                    let inner = &inner;
+                    $crate::private_intermediate_try_from_python!(py, &inner $(=> $convert)+)
+                        .map($rs_enum::$variant)
+                        .map(Self)
+                }
+            }
+        }
+    };
+    (@from $name: ident, $rs_enum: ident, $variant_name: ident, $variant: ident) => {
+        $crate::paste::paste! {
+            #[$crate::pyo3::pymethods]
+            impl $name {
+                #[staticmethod]
+                pub fn [< new_ $variant_name >]() -> Self {
+                    Self::from($rs_enum::$variant)
+                }
+            }
+        }
+    };
+    (@is_variant $self: ident, $rs_enum: ident, $variant: ident ($(=> $_convert: ty)+)) => {
+        match &$self.0 {
+            $rs_enum::$variant(_) => true,
+            _ => false,
+        }
+    };
+    (@is_variant $self: ident, $rs_enum: ident, $variant: ident) => {
+        match &$self.0 {
+            $rs_enum::$variant => true,
+            _ => false,
+        }
+    };
     (
         $(#[$meta: meta])*
         $name: ident($rs_inner: ident) $(as $py_class: literal)? {
@@ -579,6 +624,10 @@ macro_rules! py_wrap_union_enum {
         }
 
         $crate::impl_as_mut_for_wrapper!($name);
+
+        $(
+        $crate::py_wrap_union_enum!(@from $name, $rs_inner, $variant_name, $variant $($(=> $convert)+)?);
+        )+
 
         $crate::paste::paste! {
         #[$crate::pyo3::pymethods]
@@ -626,26 +675,10 @@ macro_rules! py_wrap_union_enum {
 
             $(
             const fn [< is_ $variant_name >](&self) -> bool {
-                match &self.0 {
-                    $($rs_inner::$variant(_) => {
-                        // Hacky stuff to enable the correct level of repetition in the macro.
-                        let _: Option<$crate::private_ultimate_type!($($convert),+)> = None;
-
-                        true
-                    },
-                    )?
-                    _ => false
-                }
+                $crate::py_wrap_union_enum!(@is_variant self, $rs_inner, $variant $(($(=> $convert)+))?)
             }
-                $(
-                #[staticmethod]
-                pub fn [< from_ $variant_name >](py: $crate::pyo3::Python, inner: $crate::private_ultimate_type!($($convert),+)) -> $crate::pyo3::PyResult<Self> {
-                    let inner = &inner;
-                    $crate::private_intermediate_try_from_python!(py, &inner $(=> $convert)+)
-                        .map($rs_inner::$variant)
-                        .map(Self)
-                }
 
+                $(
                 fn [< as_ $variant_name >](&self, py: $crate::pyo3::Python) -> Option<$crate::private_ultimate_type!($($convert),+)> {
                     self.[< to_ $variant_name >](py).ok()
                 }
