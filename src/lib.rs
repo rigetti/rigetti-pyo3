@@ -228,10 +228,10 @@ macro_rules! create_init_submodule {
             $(
                 let modules = _py.import("sys")?.getattr("modules")?;
                 $(
-                let new_name = format!("{}.{}", _name, $mod_name);
                 let submod = $crate::pyo3::types::PyModule::new(_py, &$mod_name)?;
-                $init_submod(&new_name, _py, submod)?;
-                modules.set_item(new_name, submod)?;
+                let qualified_name = format!("{}.{}", _name, $mod_name);
+                $init_submod(&qualified_name, _py, submod)?;
+                modules.set_item(qualified_name, submod)?;
                 m.add_submodule(submod)?;
                 )+
             )?
