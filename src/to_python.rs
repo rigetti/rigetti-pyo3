@@ -90,6 +90,8 @@ macro_rules! impl_to_python_for_tuple {
     };
 }
 
+// Implement [`ToPython`] for tuples of length 1 to 12, 12 being the maximum arity that [`pyo3::ToPyObject`]
+// is implemented for.
 impl_to_python_for_tuple!(0 T0 P0);
 impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1);
 impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2);
