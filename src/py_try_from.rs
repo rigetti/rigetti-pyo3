@@ -74,6 +74,28 @@ where
     }
 }
 
+/// Provides a generic implementation of [`PyTryFrom`] for heterogenous tuples of types that themselves implement [`PyTryFrom`]
+macro_rules! impl_py_try_from_tuple {
+    ($($idx:tt $t:tt $p:tt),+) => {
+        impl<$($t,)+ $($p,)+> PyTryFrom<($($p,)+)> for ($($t,)+)
+        where
+            $($t: PyTryFrom<$p>,)+
+        {
+            fn py_try_from(py: Python, item: &($($p,)+)) -> PyResult<Self> {
+                Ok(($(
+                    $t :: py_try_from(py, &item.$idx)?,
+                )+))
+            }
+        }
+    };
+}
+
+impl_py_try_from_tuple!(0 T0 P0);
+impl_py_try_from_tuple!(0 T0 P0, 1 T1 P1);
+impl_py_try_from_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2);
+impl_py_try_from_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3);
+impl_py_try_from_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4);
+
 /// Provides a body for `py_try_from`, delegating to the implementation for the given Python type.
 ///
 /// This should be used in other macros and for generic/container types that can't be implemented

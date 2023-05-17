@@ -72,6 +72,30 @@ where
     }
 }
 
+/// Provides a generic implementation of [`ToPython`] for heterogenous tuples of types that themselves implement
+/// [`ToPython`].
+macro_rules! impl_to_python_for_tuple {
+    ($($idx:tt $t:tt $p:tt),+) => {
+        impl<$($t,)+ $($p,)+> ToPython<($($p,)+)> for ($($t,)+)
+        where
+            $($t: ToPython<$p>, $p: ToPyObject,)+
+
+        {
+            fn to_python(&self, py: Python) -> PyResult<($($p,)+)> {
+                Ok(($(
+                    $t :: to_python(&self.$idx, py)?,
+                )+))
+            }
+        }
+    };
+}
+
+impl_to_python_for_tuple!(0 T0 P0);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4);
+
 /// Implement [`ToPython`] once for the given Rust type. Will implement for a reference to the type
 /// if a lifetime is provided.
 #[macro_export]
