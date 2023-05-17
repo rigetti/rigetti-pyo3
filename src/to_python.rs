@@ -72,6 +72,39 @@ where
     }
 }
 
+/// Provides a generic implementation of [`ToPython`] for heterogenous tuples of types that themselves implement
+/// [`ToPython`].
+macro_rules! impl_to_python_for_tuple {
+    ($($idx:tt $t:tt $p:tt),+) => {
+        impl<$($t,)+ $($p,)+> ToPython<($($p,)+)> for ($($t,)+)
+        where
+            $($t: ToPython<$p>, $p: ToPyObject,)+
+
+        {
+            fn to_python(&self, py: Python) -> PyResult<($($p,)+)> {
+                Ok(($(
+                    $t :: to_python(&self.$idx, py)?,
+                )+))
+            }
+        }
+    };
+}
+
+// Implement [`ToPython`] for tuples of length 1 to 12, 12 being the maximum arity that [`pyo3::ToPyObject`]
+// is implemented for.
+impl_to_python_for_tuple!(0 T0 P0);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5, 6 T6 P6);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5, 6 T6 P6, 7 T7 P7);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5, 6 T6 P6, 7 T7 P7, 8 T8 P8);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5, 6 T6 P6, 7 T7 P7, 8 T8 P8, 9 T9 P9);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5, 6 T6 P6, 7 T7 P7, 8 T8 P8, 9 T9 P9, 10 T10 P10);
+impl_to_python_for_tuple!(0 T0 P0, 1 T1 P1, 2 T2 P2, 3 T3 P3, 4 T4 P4, 5 T5 P5, 6 T6 P6, 7 T7 P7, 8 T8 P8, 9 T9 P9, 10 T10 P10, 11 T11 P11);
+
 /// Implement [`ToPython`] once for the given Rust type. Will implement for a reference to the type
 /// if a lifetime is provided.
 #[macro_export]
