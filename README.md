@@ -6,8 +6,6 @@ That is, given Rust library crate `foo`, these macros can be used inside a crate
 
 See [the docs](https://docs.rs/rigetti-pyo3) for more.
 
-**Note:** The above link will be broken until the crate is published on crates.io. For now, clone locally and use `cargo doc --open` to read the docs instead.
-
 ----
 
 Rigetti PyO3 is licensed under the [Apache License 2.0](LICENSE).
