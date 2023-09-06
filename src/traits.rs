@@ -59,11 +59,11 @@ macro_rules! impl_hash {
     ($name: ident) => {
         #[$crate::pyo3::pymethods]
         impl $name {
-            pub fn __hash__(&self) -> isize {
+            pub fn __hash__(&self) -> i64 {
                 let mut hasher = ::std::collections::hash_map::DefaultHasher::new();
                 ::std::hash::Hash::hash($crate::PyWrapper::as_inner(self), &mut hasher);
                 let bytes = ::std::hash::Hasher::finish(&hasher).to_ne_bytes();
-                isize::from_ne_bytes(bytes)
+                i64::from_ne_bytes(bytes)
             }
         }
     };
