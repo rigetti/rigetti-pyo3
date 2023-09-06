@@ -772,7 +772,7 @@ where
     fn to_python(&self, py: Python) -> PyResult<Py<PySet>> {
         // Using PySet::new seems to do extra cloning, so build manually.
         let set = PySet::empty(py)?;
-        for item in self.iter() {
+        for item in *self {
             set.add(item.to_python(py)?)?;
         }
         Ok(set.into_py(py))
@@ -836,7 +836,7 @@ where
     fn to_python(&self, py: Python) -> PyResult<Py<PySet>> {
         // Using PySet::new seems to do extra cloning, so build manually.
         let set = PySet::empty(py)?;
-        for item in self.iter() {
+        for item in *self {
             set.add(item.to_python(py)?)?;
         }
         Ok(set.into_py(py))

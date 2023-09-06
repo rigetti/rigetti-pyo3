@@ -427,7 +427,7 @@ where
 {
     fn py_try_from(py: Python, item: &PyDict) -> PyResult<Self> {
         let mut map = Self::with_capacity_and_hasher(item.len(), Hasher::default());
-        for (key, val) in item.iter() {
+        for (key, val) in item {
             let key = K::py_try_from(py, key)?;
             let val = V::py_try_from(py, val)?;
             map.insert(key, val);
@@ -481,7 +481,7 @@ where
 {
     fn py_try_from(py: Python, item: &PyDict) -> PyResult<Self> {
         let mut map = Self::new();
-        for (key, val) in item.iter() {
+        for (key, val) in item {
             let key = K::py_try_from(py, key)?;
             let val = V::py_try_from(py, val)?;
             map.insert(key, val);
@@ -530,7 +530,7 @@ where
 {
     fn py_try_from(py: Python, set: &PyFrozenSet) -> PyResult<Self> {
         let mut map = Self::with_capacity_and_hasher(set.len(), Hasher::default());
-        for item in set.iter() {
+        for item in set {
             let item = T::py_try_from(py, item)?;
             map.insert(item);
         }
@@ -553,7 +553,7 @@ where
 {
     fn py_try_from(py: Python, set: &PyFrozenSet) -> PyResult<Self> {
         let mut map = Self::new();
-        for item in set.iter() {
+        for item in set {
             let item = T::py_try_from(py, item)?;
             map.insert(item);
         }
@@ -618,7 +618,7 @@ where
     fn py_try_from(py: Python, py_list: &PyList) -> PyResult<Self> {
         let mut list = Self::with_capacity(py_list.len());
 
-        for item in py_list.iter() {
+        for item in py_list {
             let item = T::py_try_from(py, item)?;
             list.push(item);
         }
@@ -708,7 +708,7 @@ where
 {
     fn py_try_from(py: Python, set: &PySet) -> PyResult<Self> {
         let mut map = Self::with_capacity_and_hasher(set.len(), Hasher::default());
-        for item in set.iter() {
+        for item in set {
             let item = T::py_try_from(py, item)?;
             map.insert(item);
         }
@@ -751,7 +751,7 @@ where
 {
     fn py_try_from(py: Python, set: &PySet) -> PyResult<Self> {
         let mut map = Self::new();
-        for item in set.iter() {
+        for item in set {
             let item = T::py_try_from(py, item)?;
             map.insert(item);
         }
