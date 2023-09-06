@@ -24,7 +24,7 @@ pyo3 = { version = "0.17", default-features = false, features = ["macros", "mult
 # time has a "stable minus two MSRV" policy, which doesn't jive with
 # our more permissive MSRV
 # https://github.com/time-rs/time/discussions/535
-time = { version = "<=0.3.28", optional = true }
+time = { version = ">=0.3, <=0.3.28", optional = true }
 
 [dev-dependencies]
 thiserror = "1.0"
