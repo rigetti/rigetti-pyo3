@@ -1,3 +1,10 @@
+## 0.2.0-rc.1
+
+### Breaking Changes
+
+- Update `pyo3` to 0.19, `impl_hash!` is now compatible with 32-bit architectures.
+- Update the `time` dependency and set an upper bound, increase MSRV to 1.67.0
+
 ## 0.2.0-rc.0
 
 ### Breaking Changes
