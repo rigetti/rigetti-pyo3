@@ -1,3 +1,9 @@
+## 0.2.0-rc.0
+
+### Breaking Changes
+
+- Update the `time` dependency and set an upper bound, increase MSRV to 1.67.0
+
 ## 0.1.0
 
 ### Breaking Changes
