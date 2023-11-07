@@ -364,14 +364,14 @@ macro_rules! py_wrap_simple_enum {
 ///         // Used to implement `TryFrom<P> for PyFoo`. Any errors returned must be `PyErr`.
 ///         py -> rs {
 ///             py_dict: Py<PyDict> => Foo {
-///                 let bar = py_dict.as_ref(py).get_item("bar").unwrap().extract().unwrap();
-///                 let baz = py_dict.as_ref(py).get_item("baz").unwrap().extract().unwrap();
+///                 let bar = py_dict.as_ref(py).get_item("bar")?.unwrap().extract().unwrap();
+///                 let baz = py_dict.as_ref(py).get_item("baz")?.unwrap().extract().unwrap();
 ///                 Ok::<_, PyErr>(Foo { bar, baz })
 ///             },
 ///             py_tuple: Py<PyTuple> => (String, f32) {
 ///                 Ok::<_, PyErr>((
-///                     py_tuple.as_ref(py).get_item(0).unwrap().extract().unwrap(),
-///                     py_tuple.as_ref(py).get_item(1).unwrap().extract().unwrap(),
+///                     py_tuple.as_ref(py).get_item(0)?.extract().unwrap(),
+///                     py_tuple.as_ref(py).get_item(1)?.extract().unwrap(),
 ///                 ))
 ///             }
 ///         },
