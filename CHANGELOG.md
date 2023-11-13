@@ -1,3 +1,9 @@
+## 0.3.0
+
+### Breaking Changes
+
+- Update pyo3 to 0.20.0 (#33)
+
 ## 0.3.0-rc.0
 
 ### Breaking Changes
