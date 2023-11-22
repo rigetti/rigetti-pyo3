@@ -1,3 +1,9 @@
+## 0.3.1-rc.0
+
+### Fixes
+
+- The __name__ property on submodules created with `create_init_submodule!` is set to the fully qualified path. (#35)
+
 ## 0.3.0
 
 ### Breaking Changes
