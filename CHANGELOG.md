@@ -1,3 +1,9 @@
+## 0.3.2
+
+### Features
+
+- Loosen time requirement (#37)
+
 ## 0.3.2-rc.0
 
 ### Features
