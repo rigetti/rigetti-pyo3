@@ -2,6 +2,7 @@
 name = "rigetti-pyo3"
 version = "0.3.2"
 edition = "2021"
+license = "apache-2.0"
 license-file = "LICENSE"
 repository = "https://github.com/rigetti/rigetti-pyo3"
 readme = "README.md"
