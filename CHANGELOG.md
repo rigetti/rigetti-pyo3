@@ -1,3 +1,9 @@
+## 0.3.3-rc.0
+
+### Fixes
+
+- specify license (force patch release) (#40)
+
 ## 0.3.2
 
 ### Features
