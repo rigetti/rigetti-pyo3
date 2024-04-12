@@ -1,3 +1,9 @@
+## 0.3.3
+
+### Fixes
+
+- specify license (force patch release) (#40)
+
 ## 0.3.3-rc.1
 
 ### Fixes
