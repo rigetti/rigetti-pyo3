@@ -951,6 +951,7 @@ where
     }
 }
 
+#[cfg(feature = "indexmap")]
 impl<'a, K, V, S> ToPython<Py<PyDict>> for &'a IndexMap<K, V, S>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
@@ -967,6 +968,7 @@ where
     }
 }
 
+#[cfg(feature = "indexmap")]
 impl<'a, K, V, S> ToPython<Py<PyAny>> for &'a IndexMap<K, V, S>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
@@ -977,6 +979,7 @@ where
     }
 }
 
+#[cfg(feature = "indexmap")]
 impl<K1, K2, V1, V2, S> ToPython<IndexMap<K2, V2>> for IndexMap<K1, V1, S>
 where
     K1: ToPython<K2>,
@@ -989,6 +992,7 @@ where
     }
 }
 
+#[cfg(feature = "indexmap")]
 impl<K, V, S> ToPython<Py<PyDict>> for IndexMap<K, V, S>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
@@ -999,6 +1003,7 @@ where
     }
 }
 
+#[cfg(feature = "indexmap")]
 impl<K, V, S> ToPython<Py<PyAny>> for IndexMap<K, V, S>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
