@@ -42,6 +42,9 @@ use pyo3::types::PyTuple;
 #[cfg(feature = "time")]
 use time::{Date, Duration, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 
+#[cfg(feature = "indexmap")]
+use indexmap::IndexMap;
+
 /// Convert from a Rust type into a Python type.
 pub trait ToPython<P: ToPyObject> {
     /// Convert from Rust `self` into a Python type.
@@ -926,5 +929,84 @@ private_impl_to_python_with_reference!(&self, py, UtcOffset => Py<PyTzInfo> {
 
 #[cfg(feature = "time")]
 private_impl_to_python_pyany!(UtcOffset => Py<PyTzInfo>);
+
+// ==== IndexMap =====
+
+#[cfg(feature = "indexmap")]
+impl<'a, K1, K2, V1, V2, S> ToPython<IndexMap<K2, V2>> for &'a IndexMap<K1, V1, S>
+where
+    K1: ToPython<K2>,
+    V1: ToPython<V2>,
+    K2: ToPyObject + Eq + std::hash::Hash,
+    V2: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<IndexMap<K2, V2>> {
+        self.iter()
+            .map(|(key, val)| {
+                let key = key.to_python(py)?;
+                let val = val.to_python(py)?;
+                Ok((key, val))
+            })
+            .collect::<Result<_, _>>()
+    }
+}
+
+impl<'a, K, V, S> ToPython<Py<PyDict>> for &'a IndexMap<K, V, S>
+where
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
+{
+    fn to_python(&self, py: Python) -> PyResult<Py<PyDict>> {
+        let dict = PyDict::new(py);
+        for (key, val) in *self {
+            let pykey = key.to_python(py)?;
+            let pyval = val.to_python(py)?;
+            dict.set_item(pykey, pyval)?;
+        }
+        Ok(dict.into_py(py))
+    }
+}
+
+impl<'a, K, V, S> ToPython<Py<PyAny>> for &'a IndexMap<K, V, S>
+where
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
+{
+    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
+        <Self as ToPython<Py<PyDict>>>::to_python(self, py).map(|dict| dict.into_py(py))
+    }
+}
+
+impl<K1, K2, V1, V2, S> ToPython<IndexMap<K2, V2>> for IndexMap<K1, V1, S>
+where
+    K1: ToPython<K2>,
+    V1: ToPython<V2>,
+    K2: ToPyObject + Eq + std::hash::Hash,
+    V2: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<IndexMap<K2, V2>> {
+        <&Self as ToPython<IndexMap<K2, V2>>>::to_python(&self, py)
+    }
+}
+
+impl<K, V, S> ToPython<Py<PyDict>> for IndexMap<K, V, S>
+where
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
+{
+    fn to_python(&self, py: Python) -> PyResult<Py<PyDict>> {
+        <&Self as ToPython<Py<PyDict>>>::to_python(&self, py)
+    }
+}
+
+impl<K, V, S> ToPython<Py<PyAny>> for IndexMap<K, V, S>
+where
+    K: ToPython<Py<PyAny>> + std::fmt::Debug,
+    V: ToPython<Py<PyAny>>,
+{
+    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
+        <Self as ToPython<Py<PyDict>>>::to_python(self, py).map(|dict| dict.into_py(py))
+    }
+}
 
 // ============ End Implementations ==============
