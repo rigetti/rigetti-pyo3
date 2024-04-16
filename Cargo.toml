@@ -1,6 +1,6 @@
 [package]
 name = "rigetti-pyo3"
-version = "0.3.3"
+version = "0.3.4-rc.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/rigetti/rigetti-pyo3"

@@ -1,3 +1,9 @@
+## 0.3.4-rc.0
+
+### Features
+
+- Support IndexMap (#43)
+
 ## 0.3.3
 
 ### Fixes
