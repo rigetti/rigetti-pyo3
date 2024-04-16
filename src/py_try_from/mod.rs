@@ -39,7 +39,7 @@ use pyo3::{types::PyTuple, ToPyObject};
 use time::{Date, Duration, Month, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 
 #[cfg(feature = "indexmap")]
-/// Conversion trait implementations for indexmap.
+/// Conversion trait implementations for [`indexmap`].
 mod indexmap;
 
 /// Convert from a Python type to a Rust type.

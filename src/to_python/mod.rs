@@ -28,6 +28,7 @@ use pyo3::{
 use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
 
 #[cfg(feature = "complex")]
+/// Conversion traits for complex numbers.
 mod complex;
 
 #[cfg(feature = "time")]
@@ -38,6 +39,7 @@ use pyo3::types::PyTuple;
 use time::{Date, Duration, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
 
 #[cfg(feature = "indexmap")]
+/// Conversion traits for [`indexmap`].
 mod indexmap;
 
 /// Convert from a Rust type into a Python type.
