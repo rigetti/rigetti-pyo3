@@ -18,7 +18,6 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::BuildHasher;
 
 use pyo3::conversion::IntoPy;
-use pyo3::types::PyComplex;
 use pyo3::types::{
     PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyList, PyLong, PySet, PyString,
 };
@@ -29,11 +28,8 @@ use pyo3::{
 use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
 
 #[cfg(feature = "complex")]
-use num_complex::Complex;
-#[cfg(feature = "complex")]
-use num_traits::{Float, FloatConst};
-#[cfg(feature = "complex")]
-use std::os::raw::c_double;
+/// Conversion traits for complex numbers.
+mod complex;
 
 #[cfg(feature = "time")]
 use crate::datetime::DateTime;
@@ -41,6 +37,10 @@ use crate::datetime::DateTime;
 use pyo3::types::PyTuple;
 #[cfg(feature = "time")]
 use time::{Date, Duration, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
+
+#[cfg(feature = "indexmap")]
+/// Conversion traits for [`indexmap`].
+mod indexmap;
 
 /// Convert from a Rust type into a Python type.
 pub trait ToPython<P: ToPyObject> {
@@ -134,11 +134,12 @@ macro_rules! private_impl_to_python_with_reference {
 #[macro_export]
 macro_rules! private_impl_to_python_pyany {
     ($rs_type: ty => $py_type: ty) => {
-        private_impl_to_python_with_reference!(&self, py, $rs_type => $crate::pyo3::Py<$crate::pyo3::PyAny> {
+        $crate::private_impl_to_python_with_reference!(&self, py, $rs_type => $crate::pyo3::Py<$crate::pyo3::PyAny> {
             $crate::ToPython::<$py_type>::to_python(self, py).map(|item| $crate::pyo3::ToPyObject::to_object(&item, py))
         });
     }
 }
+pub(crate) use private_impl_to_python_pyany;
 
 /// Implements [`IntoPython`] by converting to `Py<PyAny>` and extracting `Py<T>` from that.
 ///
@@ -153,14 +154,16 @@ macro_rules! impl_for_primitive {
 }
 
 /// Implement `ToPython<Self>` for a given type.
+#[macro_export]
 macro_rules! impl_for_self {
     ($type: ty) => {
-        private_impl_to_python_with_reference!(&self, _py, $type => $type {
+        $crate::private_impl_to_python_with_reference!(&self, _py, $type => $type {
             Ok(self.clone())
         });
-        private_impl_to_python_pyany!($type => $type);
+        $crate::private_impl_to_python_pyany!($type => $type);
     }
 }
+pub(crate) use impl_for_self;
 
 // ============ Begin Implementations ==============
 
@@ -196,50 +199,6 @@ private_impl_to_python_with_reference!(&self, py, [u8] => Py<PyBytes> {
 private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyBytes> {
     self.as_slice().to_python(py)
 });
-
-// ==== Complex ====
-
-impl_for_self!(Py<PyComplex>);
-
-#[cfg(feature = "complex")]
-impl<'a, F> ToPython<Py<PyComplex>> for &'a Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyComplex>> {
-        Ok(PyComplex::from_complex(py, **self).into_py(py))
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<F> ToPython<Py<PyComplex>> for Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyComplex>> {
-        <&Self as ToPython<Py<PyComplex>>>::to_python(&self, py)
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<'a, F> ToPython<Py<PyAny>> for &'a Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        Ok(PyComplex::from_complex(py, **self).into_py(py))
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<F> ToPython<Py<PyAny>> for Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double>,
-{
-    fn to_python(&self, py: Python) -> PyResult<Py<PyAny>> {
-        <&Self as ToPython<Py<PyAny>>>::to_python(&self, py)
-    }
-}
 
 // ==== Date ====
 

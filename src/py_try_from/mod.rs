@@ -16,7 +16,6 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-use pyo3::types::PyComplex;
 use pyo3::{
     exceptions::PyValueError,
     types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
@@ -29,15 +28,8 @@ use pyo3::{
 };
 
 #[cfg(feature = "complex")]
-use num_complex::Complex;
-#[cfg(feature = "complex")]
-use num_traits::{Float, FloatConst};
-#[cfg(feature = "complex")]
-use pyo3::exceptions::PyFloatingPointError;
-#[cfg(feature = "complex")]
-use std::fmt::Display;
-#[cfg(feature = "complex")]
-use std::os::raw::c_double;
+/// Conversion trait implementations for complex numbers.
+mod complex;
 
 #[cfg(feature = "time")]
 use crate::datetime::DateTime;
@@ -45,6 +37,10 @@ use crate::datetime::DateTime;
 use pyo3::{types::PyTuple, ToPyObject};
 #[cfg(feature = "time")]
 use time::{Date, Duration, Month, OffsetDateTime, PrimitiveDateTime, Time, UtcOffset};
+
+#[cfg(feature = "indexmap")]
+/// Conversion trait implementations for [`indexmap`].
+mod indexmap;
 
 /// Convert from a Python type to a Rust type.
 pub trait PyTryFrom<P>: Sized {
@@ -149,6 +145,7 @@ macro_rules! private_impl_py_try_from {
         }
     };
 }
+pub(crate) use private_impl_py_try_from;
 
 /// Implement [`PyTryFrom<PyAny>`] for a given Rust type by delegating to its implementation
 /// for the given Python type.
@@ -159,28 +156,31 @@ macro_rules! private_impl_py_try_from_with_pyany {
         $crate::private_impl_py_try_from_pyany!($py_type => $rs_type);
     };
 }
+pub(crate) use private_impl_py_try_from_with_pyany;
 
 /// Implements [`PyTryFrom<Py<P>>`] for `T` where `T: PyTryFrom<P>` and `P` is a native Python type.
 macro_rules! impl_try_from_py_native {
     ($py_type: ty => $rs_type: ty) => {
-        private_impl_py_try_from!(&item, py, $crate::pyo3::Py<$py_type> => $rs_type {
+        $crate::private_impl_py_try_from!(&item, py, $crate::pyo3::Py<$py_type> => $rs_type {
             let item: &$py_type = item.as_ref(py);
             <Self as $crate::PyTryFrom<$py_type>>::py_try_from(py, item)
         });
     }
 }
+pub(crate) use impl_try_from_py_native;
 
 /// Implements [`PyTryFrom<T>`] for a `T` that is a native Python type.
 macro_rules! impl_try_from_self_python {
     ($py_type: ty) => {
-        private_impl_py_try_from!(&item, py, $py_type => $crate::pyo3::Py<$py_type> {
+        $crate::private_impl_py_try_from!(&item, py, $py_type => $crate::pyo3::Py<$py_type> {
             Ok(item.into_py(py))
         });
-        private_impl_py_try_from!(&item, _py, $crate::pyo3::Py<$py_type> => $crate::pyo3::Py<$py_type> {
+        $crate::private_impl_py_try_from!(&item, _py, $crate::pyo3::Py<$py_type> => $crate::pyo3::Py<$py_type> {
             Ok(item.clone())
         });
     }
 }
+pub(crate) use impl_try_from_self_python;
 
 /// Implements [`PyTryFrom<T>`] for a `T` that is a native Rust type.
 macro_rules! impl_try_from_self_rust {
@@ -232,64 +232,6 @@ impl_try_from_py_native!(PyBytes => Box<[u8]>);
 private_impl_py_try_from!(&item, py, PyBytes => Box<[u8]> {
     Vec::<u8>::py_try_from(py, item).map(From::from)
 });
-
-// ==== Complex ====
-
-impl_try_from_self_python!(PyComplex);
-
-#[cfg(feature = "complex")]
-impl<F> PyTryFrom<Self> for Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double> + Display,
-{
-    fn py_try_from(_py: Python, item: &Self) -> PyResult<Self> {
-        Ok(*item)
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<F> PyTryFrom<Py<PyComplex>> for Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double> + Display,
-{
-    fn py_try_from(py: Python, item: &Py<PyComplex>) -> PyResult<Self> {
-        Self::py_try_from(py, item.as_ref(py))
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<F> PyTryFrom<PyComplex> for Complex<F>
-where
-    // `Display` seems like an odd trait to require, but it is used to make a more useful
-    // error message. The types realistically used for this are `f32` and `f64` both of which
-    // impl `Display`, so there's no issue there.
-    F: Copy + Float + FloatConst + Into<c_double> + Display,
-{
-    fn py_try_from(_py: Python, item: &PyComplex) -> PyResult<Self> {
-        let make_error = |val: c_double| {
-            PyFloatingPointError::new_err(format!(
-                "expected {val} to be between {} and {}, inclusive",
-                F::min_value(),
-                F::max_value(),
-            ))
-        };
-        Ok(Self {
-            re: F::from(item.real()).ok_or_else(|| make_error(item.real()))?,
-            im: F::from(item.imag()).ok_or_else(|| make_error(item.imag()))?,
-        })
-    }
-}
-
-#[cfg(feature = "complex")]
-impl<F> PyTryFrom<PyAny> for Complex<F>
-where
-    F: Copy + Float + FloatConst + Into<c_double> + Display,
-{
-    fn py_try_from(py: Python, item: &PyAny) -> PyResult<Self> {
-        let dict: &PyComplex = item.downcast()?;
-        Self::py_try_from(py, dict)
-    }
-}
 
 // ==== Date ====
 
