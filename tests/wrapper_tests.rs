@@ -24,7 +24,9 @@ pub mod python {
     use super::rust::*;
 
     use pyo3::pymethods;
-    use rigetti_pyo3::{create_init_submodule, py_wrap_data_struct, py_wrap_simple_enum, py_wrap_union_enum};
+    use rigetti_pyo3::{
+        create_init_submodule, py_wrap_data_struct, py_wrap_simple_enum, py_wrap_union_enum,
+    };
 
     create_init_submodule! {
         classes: [ PyTestEnumUnaliased, PyTestEnumAliased, PyTestStruct, PyTestUnionEnum ],
