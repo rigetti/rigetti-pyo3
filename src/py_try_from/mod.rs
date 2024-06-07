@@ -16,10 +16,12 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
+#[cfg(feature = "time")]
 use pyo3::{
     exceptions::PyValueError,
     types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
 };
+
 use pyo3::{
     types::{
         PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PySet, PyString,
@@ -235,6 +237,7 @@ private_impl_py_try_from!(&item, py, PyBytes => Box<[u8]> {
 
 // ==== Date ====
 
+#[cfg(feature = "time")]
 impl_try_from_self_python!(PyDate);
 
 #[cfg(feature = "time")]
@@ -259,6 +262,7 @@ private_impl_py_try_from_with_pyany!(&item, py, PyDate => Date {
 
 // ==== DateTime ====
 
+#[cfg(feature = "time")]
 impl_try_from_self_python!(PyDateTime);
 
 #[cfg(feature = "time")]
@@ -285,6 +289,7 @@ private_impl_py_try_from_with_pyany!(&item, py, PyDateTime => DateTime {
 
 // ==== Delta ====
 
+#[cfg(feature = "time")]
 impl_try_from_self_python!(PyDelta);
 
 #[cfg(feature = "time")]
@@ -310,9 +315,12 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyDelta => Duration {
     Ok(Self::new(seconds, nanoseconds))
 });
 
+#[cfg(feature = "time")]
 impl_try_from_self_rust!(std::time::Duration);
+#[cfg(feature = "time")]
 impl_try_from_py_native!(PyDelta => std::time::Duration);
 
+#[cfg(feature = "time")]
 private_impl_py_try_from!(&item, _py, PyDelta => std::time::Duration {
     let days: u64 = item.getattr("days")?.extract()?;
     let seconds: u64 = item.getattr("seconds")?.extract()?;
@@ -723,6 +731,7 @@ private_impl_py_try_from_with_pyany!(&item, _py, PyString => String {
 
 // ==== Time ====
 
+#[cfg(feature = "time")]
 impl_try_from_self_python!(PyTime);
 
 #[cfg(feature = "time")]
@@ -746,6 +755,7 @@ private_impl_py_try_from_with_pyany!(&item, py, PyTime => (Time, Option<UtcOffse
 
 // ==== TzInfo ====
 
+#[cfg(feature = "time")]
 impl_try_from_self_python!(PyTzInfo);
 
 #[cfg(feature = "time")]
