@@ -1,3 +1,9 @@
+## 0.3.5-rc.0
+
+### Fixes
+
+- move all dependencies on pyo3 time types under our time feature (#45)
+
 ## 0.3.4
 
 ### Features
