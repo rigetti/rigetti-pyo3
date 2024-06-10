@@ -18,13 +18,17 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::hash::BuildHasher;
 
 use pyo3::conversion::IntoPy;
+
 use pyo3::types::{
     PyBool, PyByteArray, PyBytes, PyDict, PyFloat, PyFrozenSet, PyList, PyLong, PySet, PyString,
 };
+
+#[cfg(feature = "time")]
 use pyo3::{
     exceptions::PyValueError,
     types::{PyDate, PyDateTime, PyDelta, PyTime, PyTzInfo},
 };
+
 use pyo3::{Py, PyAny, PyResult, Python, ToPyObject};
 
 #[cfg(feature = "complex")]
@@ -202,6 +206,7 @@ private_impl_to_python_with_reference!(&self, py, Vec<u8> => Py<PyBytes> {
 
 // ==== Date ====
 
+#[cfg(feature = "time")]
 impl_for_self!(Py<PyDate>);
 
 #[cfg(feature = "time")]
@@ -217,6 +222,7 @@ private_impl_to_python_pyany!(Date => Py<PyDate>);
 
 // ==== DateTime ====
 
+#[cfg(feature = "time")]
 impl_for_self!(Py<PyDateTime>);
 
 #[cfg(feature = "time")]
@@ -269,6 +275,7 @@ private_impl_to_python_pyany!(OffsetDateTime => Py<PyDateTime>);
 
 // ==== Delta ====
 
+#[cfg(feature = "time")]
 impl_for_self!(Py<PyDelta>);
 
 #[cfg(feature = "time")]
@@ -288,6 +295,7 @@ private_impl_to_python_with_reference!(&self, py, Duration => Py<PyDelta> {
 #[cfg(feature = "time")]
 private_impl_to_python_pyany!(Duration => Py<PyDelta>);
 
+#[cfg(feature = "time")]
 private_impl_to_python_with_reference!(&self, py, std::time::Duration => Py<PyDelta> {
     /// The number of seconds in a day.
     const DAY_FACTOR: u64 = 60 * 60 * 24;
@@ -310,6 +318,7 @@ private_impl_to_python_with_reference!(&self, py, std::time::Duration => Py<PyDe
     PyDelta::new(py, days, seconds, microseconds, true).map(|delta| delta.into_py(py))
 });
 
+#[cfg(feature = "time")]
 private_impl_to_python_pyany!(std::time::Duration => Py<PyDelta>);
 
 // ==== Dict ====
@@ -846,6 +855,7 @@ private_impl_to_python_with_reference!(&self, py, String => Py<PyString> {
 
 // ==== Time ====
 
+#[cfg(feature = "time")]
 impl_for_self!(Py<PyTime>);
 
 #[cfg(feature = "time")]
@@ -867,6 +877,7 @@ private_impl_to_python_pyany!((Time, Option<UtcOffset>) => Py<PyTime>);
 
 // ==== TzInfo ====
 
+#[cfg(feature = "time")]
 impl_for_self!(Py<PyTzInfo>);
 
 #[cfg(feature = "time")]
