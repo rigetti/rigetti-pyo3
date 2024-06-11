@@ -85,6 +85,12 @@ pub use py_try_from::PyTryFrom;
 pub use pyo3;
 pub use to_python::ToPython;
 
+#[cfg(all(feature = "abi3", feature = "time"))]
+compile_error!(
+    "Cannot enable the time feature with the pyo3/abi3 feature, \
+     but you've asked for rigetti-pyo3 to be abi3-compatible."
+);
+
 /// Implemented by error types generated with [`py_wrap_error`].
 ///
 /// Trait-ifies the ability to convert an error into a [`PyErr`](pyo3::PyErr).
