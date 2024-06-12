@@ -85,11 +85,11 @@ pub use py_try_from::PyTryFrom;
 pub use pyo3;
 pub use to_python::ToPython;
 
-/// Implemented by error types generated with [`py_wrap_error`](crate::py_wrap_error).
+/// Implemented by error types generated with [`py_wrap_error`].
 ///
-/// Trait-ifies the ability to convert an error into a [`PyErr`](crate::pyo3::PyErr).
+/// Trait-ifies the ability to convert an error into a [`PyErr`]
 pub trait ToPythonError {
-    /// Convert this error into a [`PyErr`](crate::pyo3::PyErr).
+    /// Convert this error into a [`PyErr`].
     fn to_py_err(self) -> PyErr;
 }
 
