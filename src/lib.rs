@@ -25,6 +25,7 @@
 // Covers correctness, suspicious, style, complexity, and perf
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
 #![deny(clippy::cargo)]
 #![warn(clippy::nursery)]
 // Conflicts with unreachable_pub
@@ -72,6 +73,7 @@ use pyo3::PyErr;
 #[cfg(feature = "time")]
 pub mod datetime;
 mod py_try_from;
+mod sync;
 mod to_python;
 mod traits;
 mod wrappers;
