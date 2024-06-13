@@ -1,3 +1,9 @@
+## 0.3.6
+
+### Features
+
+- Add macros to create synchronous Python functions from async Rust functions. (#48)
+
 ## 0.3.6-rc.0
 
 ### Features
