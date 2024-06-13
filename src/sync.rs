@@ -118,14 +118,14 @@ macro_rules! py_function_sync_async {
         #[allow(clippy::too_many_arguments, missing_docs)]
         #[pyo3(name = $name "")]
         pub(crate) fn [< py_ $name >](py: ::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> $ret)? {
-            $crate::py::sync::py_sync!(py, $name($($arg),*))
+            $crate::py_sync!(py, $name($($arg),*))
         }
 
         $(#[$meta])+
         #[pyo3(name = $name "_async")]
         #[allow(clippy::too_many_arguments, missing_docs)]
         pub(crate) fn [< py_ $name _async >](py: ::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) -> ::pyo3::PyResult<&::pyo3::PyAny> {
-            $crate::py::sync::py_async!(py, $name($($arg),*))
+            $crate::py_async!(py, $name($($arg),*))
         }
         }
     };
