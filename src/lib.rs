@@ -25,6 +25,7 @@
 // Covers correctness, suspicious, style, complexity, and perf
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
+#![allow(clippy::module_name_repetitions)]
 #![deny(clippy::cargo)]
 #![warn(clippy::nursery)]
 // Conflicts with unreachable_pub
@@ -72,6 +73,7 @@ use pyo3::PyErr;
 #[cfg(feature = "time")]
 pub mod datetime;
 mod py_try_from;
+mod sync;
 mod to_python;
 mod traits;
 mod wrappers;
@@ -83,11 +85,11 @@ pub use py_try_from::PyTryFrom;
 pub use pyo3;
 pub use to_python::ToPython;
 
-/// Implemented by error types generated with [`py_wrap_error`](crate::py_wrap_error).
+/// Implemented by error types generated with [`py_wrap_error`].
 ///
-/// Trait-ifies the ability to convert an error into a [`PyErr`](crate::pyo3::PyErr).
+/// Trait-ifies the ability to convert an error into a [`PyErr`](pyo3::PyErr).
 pub trait ToPythonError {
-    /// Convert this error into a [`PyErr`](crate::pyo3::PyErr).
+    /// Convert this error into a [`PyErr`](pyo3::PyErr).
     fn to_py_err(self) -> PyErr;
 }
 
