@@ -87,9 +87,9 @@ pub use to_python::ToPython;
 
 /// Implemented by error types generated with [`py_wrap_error`].
 ///
-/// Trait-ifies the ability to convert an error into a [`PyErr`]
+/// Trait-ifies the ability to convert an error into a [`PyErr`](pyo3::PyErr).
 pub trait ToPythonError {
-    /// Convert this error into a [`PyErr`].
+    /// Convert this error into a [`PyErr`](pyo3::PyErr).
     fn to_py_err(self) -> PyErr;
 }
 

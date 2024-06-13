@@ -68,7 +68,7 @@ macro_rules! py_async {
 /// arguments.
 ///
 /// The given function will be spawned on a Rust event loop
-/// this means functions like [`pyo3::Python::with_gil`]
+/// this means functions like [`pyo3::Python::with_gil`](pyo3::Python::with_gil)
 /// should not be used, as acquiring Python's global
 /// interpreter lock from a Rust runtime
 /// isn't possible.
