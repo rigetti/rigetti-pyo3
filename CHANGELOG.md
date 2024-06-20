@@ -1,3 +1,9 @@
+## 0.4.0
+
+### Breaking Changes
+
+- fully move all dependencies on pyo3 time types under our time feature + expose new abi3 feature for documentation
+
 ## 0.4.0-rc.0
 
 ### Breaking Changes
