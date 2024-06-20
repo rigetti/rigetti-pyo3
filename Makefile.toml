@@ -1,5 +1,5 @@
 [env]
-    CARGO_HACK_COMMON_FLAGS = "--feature-powerset --optional-deps --exclude-features extension-module"
+    CARGO_HACK_COMMON_FLAGS = "--feature-powerset --exclude-features extension-module --mutually-exclusive-features abi3,time"
 
 [tasks.clean]
     clear = true
@@ -12,7 +12,7 @@
     install_crate = { rustup_component_name = "llvm-tools-preview" }
 
 [tasks.install-cargo-hack]
-    install_crate = { crate_name = "cargo-hack", binary = "cargo-hack", test_arg = ["hack", "--help"] }
+    install_crate = { crate_name = "cargo-hack", min_version = "0.6.28", binary = "cargo-hack", test_arg = ["hack", "--help"] }
 
 [tasks.check]
     clear = true

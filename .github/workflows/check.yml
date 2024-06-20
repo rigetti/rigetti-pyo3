@@ -14,7 +14,7 @@ jobs:
             override: true
       - uses: taiki-e/install-action@v1
         with:
-            tool: cargo-hack,cargo-make
+            tool: cargo-hack@0.6.28,cargo-make
       - run: cargo make check
   clippy:
     name: Clippy Lints
@@ -26,10 +26,10 @@ jobs:
             toolchain: stable
             components: clippy
             override: true
-      - uses: actions-rs/clippy-check@v1
+      - uses: taiki-e/install-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+            tool: cargo-hack@0.6.28,cargo-make
+      - run: cargo make clippy
   deadlinks:
     name: Cargo Deadlinks
     runs-on: ubuntu-latest
@@ -84,5 +84,5 @@ jobs:
             override: true
       - uses: taiki-e/install-action@v1
         with:
-            tool: cargo-hack,cargo-make
+            tool: cargo-hack@0.6.28,cargo-make
       - run: cargo make test
