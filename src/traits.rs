@@ -25,6 +25,8 @@ macro_rules! impl_compare {
     ($name: ident) => {
         #[$crate::pyo3::pymethods]
         impl $name {
+            /// Implements all the Python comparison operators in terms of the
+            /// Rust [`PartialOrd`](std::cmp::PartialOrd) instance.
             #![allow(clippy::use_self)]
             pub fn __richcmp__(&self, object: &Self, cmp: $crate::pyo3::basic::CompareOp) -> bool {
                 let result = ::std::cmp::PartialOrd::partial_cmp(self, object);
@@ -59,6 +61,8 @@ macro_rules! impl_hash {
     ($name: ident) => {
         #[$crate::pyo3::pymethods]
         impl $name {
+            /// Implements `__hash__` for Python in terms of the Rust
+            /// [`Hash`](std::hash::Hash) instance.
             pub fn __hash__(&self) -> i64 {
                 let mut hasher = ::std::collections::hash_map::DefaultHasher::new();
                 ::std::hash::Hash::hash($crate::PyWrapper::as_inner(self), &mut hasher);
@@ -73,6 +77,8 @@ macro_rules! impl_hash {
 #[macro_export]
 macro_rules! impl_repr {
     ($name: ident) => {
+        /// Implements `__repr__` for Python in terms of the Rust
+        /// [`Debug`](std::fmt::Debug) instance.
         #[$crate::pyo3::pymethods]
         impl $name {
             pub fn __repr__(&self) -> String {
@@ -86,6 +92,8 @@ macro_rules! impl_repr {
 #[macro_export]
 macro_rules! impl_str {
     ($name: ident) => {
+        /// Implements `__str__` for Python in terms of the Rust
+        /// [`Display`](std::fmt::Display) instance.
         #[$crate::pyo3::pymethods]
         impl $name {
             pub fn __str__(&self) -> String {
@@ -124,6 +132,8 @@ macro_rules! impl_parse {
     ($name: ident) => {
         #[$crate::pyo3::pymethods]
         impl $name {
+            /// Implements a static `parse` method for Python in terms of the
+            /// Rust [`FromStr`](std::str::FromStr) instance.
             #[staticmethod]
             pub fn parse(input: &str) -> $crate::pyo3::PyResult<Self> {
                 <Self as std::str::FromStr>::from_str(input)

@@ -198,6 +198,7 @@ impl<T> PyWrapperMut for T where T: PyWrapper + AsMut<Self::Inner> {}
 /// }
 ///
 /// create_init_submodule! {
+///     /// Initialize this module and all its submodules
 ///     classes: [ PyCoolString ],
 ///     errors: [ IOError ],
 ///     funcs: [ do_nothing ],
@@ -212,12 +213,14 @@ impl<T> PyWrapperMut for T where T: PyWrapper + AsMut<Self::Inner> {}
 #[macro_export]
 macro_rules! create_init_submodule {
     (
+        $(#[$meta:meta])*
         $(classes: [ $($class: ty),+ ],)?
         $(consts: [ $($const: ident),+ ],)?
         $(errors: [ $($error: ty),+ ],)?
         $(funcs: [ $($func: path),+ ],)?
         $(submodules: [ $($mod_name: literal: $init_submod: path),+ ],)?
     ) => {
+        $(#[$meta])*
         pub(crate) fn init_submodule(_name: &str, _py: $crate::pyo3::Python, m: &$crate::pyo3::types::PyModule) -> $crate::pyo3::PyResult<()> {
             $($(
             m.add_class::<$class>()?;

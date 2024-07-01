@@ -453,6 +453,13 @@ macro_rules! py_wrap_struct {
         impl $name {
             #![allow(clippy::use_self)]
 
+            #[doc = concat!(
+                r"Create a new [`",
+                stringify!($name),
+                r"`] from Python arguments; corresponds to `",
+                $($py_class, r".",)?
+                r"__new__()` in Python"
+            )]
             #[new]
             pub fn new(py: $crate::pyo3::Python, input: $crate::pyo3::Py<$crate::pyo3::PyAny>) -> $crate::pyo3::PyResult<Self> {
                 use $crate::pyo3::FromPyObject;
@@ -579,6 +586,15 @@ macro_rules! py_wrap_union_enum {
         $crate::paste::paste! {
             #[$crate::pyo3::pymethods]
             impl $name {
+                #[doc = concat!(
+                    r"The Python wrapper for [`",
+                    stringify!($rs_enum),
+                    r"::",
+                    stringify!($variant),
+                    r"`], creating a [`",
+                    stringify!($name),
+                    r"`] and taking a Python argument."
+                )]
                 #[staticmethod]
                 pub fn [< from_ $variant_name >](py: $crate::pyo3::Python, inner: $crate::private_ultimate_type!($($convert),+)) -> $crate::pyo3::PyResult<Self> {
                     let inner = &inner;
@@ -593,6 +609,10 @@ macro_rules! py_wrap_union_enum {
         $crate::paste::paste! {
             #[$crate::pyo3::pymethods]
             impl $name {
+                #[doc = concat!(
+                    r"Create a new [`", stringify!($name), r"`] wrapping a ",
+                    r"[`", stringify!($rs_enum), r"::", stringify!($variant), "`]."
+                )]
                 #[staticmethod]
                 pub fn [< new_ $variant_name >]() -> Self {
                     Self::from($rs_enum::$variant)
@@ -632,6 +652,13 @@ macro_rules! py_wrap_union_enum {
         $crate::paste::paste! {
         #[$crate::pyo3::pymethods]
         impl $name {
+            #[doc = concat!(
+                r"Create a new [`",
+                stringify!($name),
+                r"`] from a Python argument; corresponds to `",
+                $($py_class, r".",)?
+                r"__new__()` in Python"
+            )]
             #[new]
             pub fn new(py: $crate::pyo3::Python, input: &$crate::pyo3::PyAny) -> $crate::pyo3::PyResult<Self> {
                 $(
@@ -655,6 +682,15 @@ macro_rules! py_wrap_union_enum {
                 ))
             }
 
+            #[doc = concat!(
+                r"Directly return the Python version of the variant discriminant wrapped by this ",
+                r"value; ",
+                r"i.e., performs the match `",
+                stringify!($rs_inner),
+                r"::Variant(x) => x` for every variant constructor in [`",
+                stringify!($rs_inner),
+                r"`]"
+            )]
             #[allow(unreachable_code, unreachable_pattern)]
             pub fn inner(&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<$crate::pyo3::Py<$crate::pyo3::PyAny>> {
                 match &self.0 {
@@ -674,15 +710,31 @@ macro_rules! py_wrap_union_enum {
             }
 
             $(
+            #[doc = concat!(
+                r"Tests if this [`", stringify!($name), r"`] ",
+                r"wraps a [`", stringify!($rs_inner), r"::", stringify!($variant_name), "`] value"
+            )]
             const fn [< is_ $variant_name >](&self) -> bool {
                 $crate::py_wrap_union_enum!(@is_variant self, $rs_inner, $variant $(($(=> $convert)+))?)
             }
 
                 $(
+                #[doc = concat!(
+                    r"Returns `x` if this [`", stringify!($name), r"`] ",
+                    r"wraps a `", stringify!($rs_inner), r"::", stringify!($variant_name), "`(x); ",
+                    r"otherwise returns (Python) `None`.  On the Rust side, this corresponds to ",
+                    r"either `Some(x)` or [`None`]."
+                )]
                 fn [< as_ $variant_name >](&self, py: $crate::pyo3::Python) -> Option<$crate::private_ultimate_type!($($convert),+)> {
                     self.[< to_ $variant_name >](py).ok()
                 }
 
+                #[doc = concat!(
+                    r"Returns `x` if this [`", stringify!($name), r"`] ",
+                    r"wraps a `", stringify!($rs_inner), r"::", stringify!($variant_name), "`(x); ",
+                    r"otherwise raises a `ValueError`.  On the Rust side, this corresponds to ",
+                    r"either `Ok(x)` or `Err(...)`."
+                )]
                 fn [< to_ $variant_name >](&self, py: $crate::pyo3::Python) -> $crate::pyo3::PyResult<$crate::private_ultimate_type!($($convert),+)> {
                     if let $rs_inner::$variant(inner) = &self.0 {
                         $crate::private_intermediate_to_python!(py, &inner $(=> $convert)+)
@@ -721,7 +773,8 @@ macro_rules! py_wrap_union_enum {
 /// ```
 #[macro_export]
 macro_rules! wrap_error {
-    ($name: ident ($inner: ty)$(;)?) => {
+    ($(#[$meta: meta])* $name: ident ($inner: ty)$(;)?) => {
+        $(#[$meta])*
         #[derive(Debug)]
         #[repr(transparent)]
         pub struct $name($inner);
@@ -844,6 +897,10 @@ macro_rules! py_wrap_data_struct {
             #[rigetti_pyo3::pyo3::pymethods]
             impl $name {
                 $(
+                #[doc = concat!(
+                    r"Get the ", stringify!($field_name), r" field from Python.  ",
+                    r"Annotated with `@property`."
+                )]
                 #[getter]
                 fn [< get_ $field_name >](&self, py: $crate::pyo3::Python<'_>) -> $crate::pyo3::PyResult<$crate::private_ultimate_type!($($convert),+)> {
                     use $crate::{PyWrapper, ToPython};
@@ -851,6 +908,10 @@ macro_rules! py_wrap_data_struct {
                     $crate::private_intermediate_to_python!(py, &inner $(=> $convert)+)
                 }
 
+                #[doc = concat!(
+                    r"Set the ", stringify!($field_name), r" field from Python.  ",
+                    r"Annotated with `@", stringify!($field_name), r".setter`."
+                )]
                 #[setter]
                 fn [< set_ $field_name >](&mut self, py: $crate::pyo3::Python<'_>, from: $crate::private_ultimate_type!($($convert),+)) -> $crate::pyo3::PyResult<()> {
                     use $crate::{PyTryFrom, PyWrapperMut};
