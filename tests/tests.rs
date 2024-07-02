@@ -51,7 +51,9 @@ fn test_macro_expansion() {
         // [rust-ctor](https://crates.io/crates/ctor) crate, which generates
         // different output on different OSes.  Once we're doing *that*, we have
         // to specify a specific Python ABI so that PyO3 doesn't get alarmed
-        // about cross-compilation.  This is all a minor headache.
+        // about cross-compilation.  We pick the oldest availble option so that
+        // we can be flexible with which Python interpreter is available on the
+        // system.  This is all a minor headache.
         //
         // In particular, this means that if you are running these tests on a
         // different OS, you will need to install the specified target.  The
@@ -62,7 +64,7 @@ fn test_macro_expansion() {
             "x86_64-unknown-linux-gnu",
             "--no-default-features",
             "--features",
-            "pyo3/abi3-py311",
+            "pyo3/abi3-py37",
         ],
     )
 }
