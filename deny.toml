@@ -49,6 +49,13 @@ skip-tree = []
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = [ "https://github.com/rust-lang/crates.io-index",]
+# TODO: To be removed when we go back to using the official macrotest crate,
+# which will happen once <https://github.com/eupn/macrotest/pull/115> is merged
+# and they make a release containing it.  See also the reference to this issue
+# in `Cargo.toml`.
+allow-git = [
+    "https://github.com/antalsz/macrotest.git",
+]
 
 [sources.allow-org]
 github = [ "rigetti",]
