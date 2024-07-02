@@ -370,13 +370,14 @@ pub mod python {
                     ::inventory::core::option::Option::None,
                 ),
             };
+            #[link_section = ".text.startup"]
             unsafe extern "C" fn __ctor() {
                 unsafe {
                     ::inventory::ErasedNode::submit(__INVENTORY.value, &__INVENTORY)
                 }
             }
             #[used]
-            #[link_section = "__DATA,__mod_init_func"]
+            #[link_section = ".init_array"]
             static __CTOR: unsafe extern "C" fn() = __ctor;
         };
         #[doc(hidden)]
@@ -415,20 +416,18 @@ pub mod python {
                     Inventory::new(_pyo3::impl_::pyclass::PyClassItems {
                         methods: &[
                             _pyo3::class::PyMethodDefType::Static(
-                                _pyo3::impl_::pymethods::PyMethodDef::fastcall_cfunction_with_keywords(
+                                _pyo3::impl_::pymethods::PyMethodDef::cfunction_with_keywords(
                                         "from_string\0",
-                                        _pyo3::impl_::pymethods::PyCFunctionFastWithKeywords({
+                                        _pyo3::impl_::pymethods::PyCFunctionWithKeywords({
                                             unsafe extern "C" fn trampoline(
                                                 _slf: *mut _pyo3::ffi::PyObject,
-                                                _args: *const *mut _pyo3::ffi::PyObject,
-                                                _nargs: _pyo3::ffi::Py_ssize_t,
-                                                _kwnames: *mut _pyo3::ffi::PyObject,
+                                                _args: *mut _pyo3::ffi::PyObject,
+                                                _kwargs: *mut _pyo3::ffi::PyObject,
                                             ) -> *mut _pyo3::ffi::PyObject {
-                                                _pyo3::impl_::trampoline::fastcall_with_keywords(
+                                                _pyo3::impl_::trampoline::cfunction_with_keywords(
                                                     _slf,
                                                     _args,
-                                                    _nargs,
-                                                    _kwnames,
+                                                    _kwargs,
                                                     PyTestUnionEnum::__pymethod_from_string__,
                                                 )
                                             }
@@ -446,13 +445,14 @@ pub mod python {
                     ::inventory::core::option::Option::None,
                 ),
             };
+            #[link_section = ".text.startup"]
             unsafe extern "C" fn __ctor() {
                 unsafe {
                     ::inventory::ErasedNode::submit(__INVENTORY.value, &__INVENTORY)
                 }
             }
             #[used]
-            #[link_section = "__DATA,__mod_init_func"]
+            #[link_section = ".init_array"]
             static __CTOR: unsafe extern "C" fn() = __ctor;
         };
         #[doc(hidden)]
@@ -461,9 +461,8 @@ pub mod python {
             unsafe fn __pymethod_from_string__<'py>(
                 py: _pyo3::Python<'py>,
                 _slf: *mut _pyo3::ffi::PyObject,
-                _args: *const *mut _pyo3::ffi::PyObject,
-                _nargs: _pyo3::ffi::Py_ssize_t,
-                _kwnames: *mut _pyo3::ffi::PyObject,
+                _args: *mut _pyo3::ffi::PyObject,
+                _kwargs: *mut _pyo3::ffi::PyObject,
             ) -> _pyo3::PyResult<*mut _pyo3::ffi::PyObject> {
                 let function = PyTestUnionEnum::from_string;
                 const DESCRIPTION: _pyo3::impl_::extract_argument::FunctionDescription = _pyo3::impl_::extract_argument::FunctionDescription {
@@ -478,10 +477,10 @@ pub mod python {
                 };
                 let mut output = [::std::option::Option::None; 1usize];
                 let (_args, _kwargs) = DESCRIPTION
-                    .extract_arguments_fastcall::<
+                    .extract_arguments_tuple_dict::<
                         _pyo3::impl_::extract_argument::NoVarargs,
                         _pyo3::impl_::extract_argument::NoVarkeywords,
-                    >(py, _args, _nargs, _kwnames, &mut output)?;
+                    >(py, _args, _kwargs, &mut output)?;
                 _pyo3::impl_::wrap::OkWrap::wrap(
                         function(
                             py,
@@ -745,13 +744,14 @@ pub mod python {
                     ::inventory::core::option::Option::None,
                 ),
             };
+            #[link_section = ".text.startup"]
             unsafe extern "C" fn __ctor() {
                 unsafe {
                     ::inventory::ErasedNode::submit(__INVENTORY.value, &__INVENTORY)
                 }
             }
             #[used]
-            #[link_section = "__DATA,__mod_init_func"]
+            #[link_section = ".init_array"]
             static __CTOR: unsafe extern "C" fn() = __ctor;
         };
         #[doc(hidden)]
@@ -2175,13 +2175,14 @@ pub mod python {
                     ::inventory::core::option::Option::None,
                 ),
             };
+            #[link_section = ".text.startup"]
             unsafe extern "C" fn __ctor() {
                 unsafe {
                     ::inventory::ErasedNode::submit(__INVENTORY.value, &__INVENTORY)
                 }
             }
             #[used]
-            #[link_section = "__DATA,__mod_init_func"]
+            #[link_section = ".init_array"]
             static __CTOR: unsafe extern "C" fn() = __ctor;
         };
         #[doc(hidden)]
@@ -2338,13 +2339,14 @@ pub mod python {
                     ::inventory::core::option::Option::None,
                 ),
             };
+            #[link_section = ".text.startup"]
             unsafe extern "C" fn __ctor() {
                 unsafe {
                     ::inventory::ErasedNode::submit(__INVENTORY.value, &__INVENTORY)
                 }
             }
             #[used]
-            #[link_section = "__DATA,__mod_init_func"]
+            #[link_section = ".init_array"]
             static __CTOR: unsafe extern "C" fn() = __ctor;
         };
         #[doc(hidden)]

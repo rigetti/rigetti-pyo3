@@ -41,7 +41,28 @@ assert TestUnionEnum.new_unit().is_unit()
 
 #[test]
 fn test_macro_expansion() {
-    // To regenerate the snapshot, delete the generated
-    // `tests/wrapper_tests/mod.expanded.rs` file and rerun the test.
-    macrotest::expand("tests/wrapper_tests/mod.rs")
+    // To regenerate the snapshot, run this test with the environment variable
+    // `MACROTEST=overwrite`, or alternatively delete the generated
+    // `tests/wrapper_tests/mod.expanded.rs` file and rerun this test.
+    macrotest::expand_args(
+        "tests/wrapper_tests/mod.rs",
+        // We have to specify a specific OS target because until PyO3 v0.22,
+        // PyO3 transitively depends on the
+        // [rust-ctor](https://crates.io/crates/ctor) crate, which generates
+        // different output on different OSes.  Once we're doing *that*, we have
+        // to specify a specific Python ABI so that PyO3 doesn't get alarmed
+        // about cross-compilation.  This is all a minor headache.
+        //
+        // In particular, this means that if you are running these tests on a
+        // different OS, you will need to install the specified target.  The
+        // target is specifically chosen to be the one we use on CI, so CI does
+        // not need an extra `rustup target add`, but some developers will.
+        &[
+            "--target",
+            "x86_64-unknown-linux-gnu",
+            "--no-default-features",
+            "--features",
+            "pyo3/abi3-py311",
+        ],
+    )
 }
