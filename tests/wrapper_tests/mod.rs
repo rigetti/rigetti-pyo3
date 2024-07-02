@@ -77,31 +77,6 @@ fn wrapper_tests(py: Python<'_>, m: &PyModule) -> PyResult<()> {
     python::init_submodule("wrapper_tests", py, m)
 }
 
-#[test]
-fn test_enum_as_data_struct_member() {
+pub fn append_to_inittab() {
     pyo3::append_to_inittab!(wrapper_tests);
-    pyo3::prepare_freethreaded_python();
-    let result: PyResult<()> = Python::with_gil(|py| {
-        let code = r#"
-from wrapper_tests import TestEnumUnaliased, TestEnumAliased, TestStruct, TestUnionEnum
-
-struct = TestStruct()
-
-assert struct.test_enum_unaliased == TestEnumUnaliased.One
-assert struct.test_enum_aliased == TestEnumAliased.NONE
-
-struct.test_enum_unaliased = TestEnumUnaliased.Two
-struct.test_enum_aliased = TestEnumAliased.Two
-
-assert struct.test_enum_unaliased == TestEnumUnaliased.Two
-assert struct.test_enum_aliased == TestEnumAliased.Two
-
-assert TestUnionEnum.new_unit().is_unit()
-"#;
-        PyModule::from_code(py, code, "example.py", "example")?;
-
-        Ok(())
-    });
-
-    result.expect("python code should execute without issue")
 }
