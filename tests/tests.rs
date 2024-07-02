@@ -1,12 +1,13 @@
 use pyo3::{types::PyModule, PyResult, Python};
 
-// The code being tested is in a separate module so it can be expanded (with
-// `cargo expand`) without expanding the contents of the tests themselves, which
-// is useful when testing or debugging the macros defined in this crate.  This
-// file must be in a subdirectory (`wrapper_tests/mod.rs` instead of
-// `wrapper_tests.rs`) because the generated `.expanded.rs` file cannot be in
-// the root `tests/` directory or `cargo test` will attempt to build it as a
-// test case as well.
+// The code being tested is in a separate module so it can be expanded (see
+// [`test_macro_expansion`]) without expanding the contents of the tests
+// themselves.  You can also take advantage of this when manually using `cargo
+// expand`, which may be useful when testing or debugging the macros defined in
+// this crate.  This file must be in a subdirectory (`wrapper_tests/mod.rs`
+// instead of `wrapper_tests.rs`) because the generated `.expanded.rs` file
+// cannot be in the root `tests/` directory or `cargo test` will attempt to
+// build it as a test case as well.
 mod wrapper_tests;
 
 #[test]
@@ -36,4 +37,11 @@ assert TestUnionEnum.new_unit().is_unit()
     });
 
     result.expect("python code should execute without issue")
+}
+
+#[test]
+fn test_macro_expansion() {
+    // To regenerate the snapshot, delete the generated
+    // `tests/wrapper_tests/mod.expanded.rs` file and rerun the test.
+    macrotest::expand("tests/wrapper_tests/mod.rs")
 }
