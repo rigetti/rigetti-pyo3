@@ -1,3 +1,9 @@
+## 0.4.1
+
+### Features
+
+- add documentation to all generated methods
+
 ## 0.4.1-rc.0
 
 ### Features
