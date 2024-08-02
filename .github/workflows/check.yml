@@ -84,5 +84,7 @@ jobs:
             override: true
       - uses: taiki-e/install-action@v1
         with:
-            tool: cargo-hack@0.6.28,cargo-make
+            # cargo-expand does not have stable output, so changing the version,
+            # while fine, will produce test case noise
+            tool: cargo-hack@0.6.28,cargo-make,cargo-expand@1.0.88
       - run: cargo make test
