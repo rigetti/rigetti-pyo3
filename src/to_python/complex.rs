@@ -24,7 +24,7 @@ use crate::{impl_for_self, ToPython};
 impl_for_self!(Py<PyComplex>);
 
 #[cfg(feature = "complex")]
-impl<'a, F> ToPython<Py<PyComplex>> for &'a Complex<F>
+impl<F> ToPython<Py<PyComplex>> for &Complex<F>
 where
     F: Copy + Float + FloatConst + Into<c_double>,
 {
@@ -44,7 +44,7 @@ where
 }
 
 #[cfg(feature = "complex")]
-impl<'a, F> ToPython<Py<PyAny>> for &'a Complex<F>
+impl<F> ToPython<Py<PyAny>> for &Complex<F>
 where
     F: Copy + Float + FloatConst + Into<c_double>,
 {
