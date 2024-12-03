@@ -56,7 +56,7 @@ pub trait ToPython<P: ToPyObject> {
     fn to_python(&self, py: Python) -> PyResult<P>;
 }
 
-impl<'a, T, P> ToPython<P> for &'a Box<T>
+impl<T, P> ToPython<P> for &Box<T>
 where
     T: ToPython<P>,
     P: ToPyObject,
@@ -325,7 +325,7 @@ private_impl_to_python_pyany!(std::time::Duration => Py<PyDelta>);
 
 impl_for_self!(Py<PyDict>);
 
-impl<'a, K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &'a HashMap<K1, V1, Hasher>
+impl<K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &HashMap<K1, V1, Hasher>
 where
     K1: ToPython<K2>,
     V1: ToPython<V2>,
@@ -343,7 +343,7 @@ where
     }
 }
 
-impl<'a, K, V, Hasher> ToPython<Py<PyDict>> for &'a HashMap<K, V, Hasher>
+impl<K, V, Hasher> ToPython<Py<PyDict>> for &HashMap<K, V, Hasher>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
     V: ToPython<Py<PyAny>>,
@@ -359,7 +359,7 @@ where
     }
 }
 
-impl<'a, K, V, Hasher> ToPython<Py<PyAny>> for &'a HashMap<K, V, Hasher>
+impl<K, V, Hasher> ToPython<Py<PyAny>> for &HashMap<K, V, Hasher>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
     V: ToPython<Py<PyAny>>,
@@ -401,7 +401,7 @@ where
     }
 }
 
-impl<'a, K1, K2, V1, V2> ToPython<BTreeMap<K2, V2>> for &'a BTreeMap<K1, V1>
+impl<K1, K2, V1, V2> ToPython<BTreeMap<K2, V2>> for &BTreeMap<K1, V1>
 where
     K1: ToPython<K2> + std::fmt::Debug,
     V1: ToPython<V2>,
@@ -419,7 +419,7 @@ where
     }
 }
 
-impl<'a, K, V> ToPython<Py<PyDict>> for &'a BTreeMap<K, V>
+impl<K, V> ToPython<Py<PyDict>> for &BTreeMap<K, V>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
     V: ToPython<Py<PyAny>>,
@@ -435,7 +435,7 @@ where
     }
 }
 
-impl<'a, K, V> ToPython<Py<PyAny>> for &'a BTreeMap<K, V>
+impl<K, V> ToPython<Py<PyAny>> for &BTreeMap<K, V>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
     V: ToPython<Py<PyAny>>,
@@ -488,7 +488,7 @@ impl_for_primitive!(f64 => Py<PyFloat>);
 
 // ==== FrozenSet ====
 
-impl<'a, T, Hasher> ToPython<Py<PyFrozenSet>> for &'a HashSet<T, Hasher>
+impl<T, Hasher> ToPython<Py<PyFrozenSet>> for &HashSet<T, Hasher>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -510,7 +510,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PyFrozenSet>> for &'a BTreeSet<T>
+impl<T> ToPython<Py<PyFrozenSet>> for &BTreeSet<T>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -563,7 +563,7 @@ impl_for_primitive!(usize => Py<PyLong>);
 
 // ==== Optional[T] ====
 
-impl<'a, T, P> ToPython<Option<P>> for &'a Option<T>
+impl<T, P> ToPython<Option<P>> for &Option<T>
 where
     T: ToPython<P>,
     P: ToPyObject,
@@ -587,7 +587,7 @@ where
 
 impl_for_self!(Py<PyList>);
 
-impl<'a, T, P> ToPython<Vec<P>> for &'a [T]
+impl<T, P> ToPython<Vec<P>> for &[T]
 where
     T: ToPython<P> + Clone,
     P: ToPyObject,
@@ -599,7 +599,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PyList>> for &'a [T]
+impl<T> ToPython<Py<PyList>> for &[T]
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -612,7 +612,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PyAny>> for &'a [T]
+impl<T> ToPython<Py<PyAny>> for &[T]
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -659,7 +659,7 @@ where
     }
 }
 
-impl<'a, T, P> ToPython<Vec<P>> for &'a Vec<T>
+impl<T, P> ToPython<Vec<P>> for &Vec<T>
 where
     T: ToPython<P> + Clone,
     P: ToPyObject,
@@ -678,7 +678,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PyList>> for &'a Vec<T>
+impl<T> ToPython<Py<PyList>> for &Vec<T>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -696,7 +696,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PyAny>> for &'a Vec<T>
+impl<T> ToPython<Py<PyAny>> for &Vec<T>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -709,7 +709,7 @@ where
 
 impl_for_self!(Py<PySet>);
 
-impl<'a, T, P, Hasher> ToPython<HashSet<P, Hasher>> for &'a HashSet<T, Hasher>
+impl<T, P, Hasher> ToPython<HashSet<P, Hasher>> for &HashSet<T, Hasher>
 where
     T: ToPython<P> + Clone,
     P: ToPyObject + std::hash::Hash + Eq,
@@ -733,7 +733,7 @@ where
     }
 }
 
-impl<'a, T, Hasher> ToPython<Py<PySet>> for &'a HashSet<T, Hasher>
+impl<T, Hasher> ToPython<Py<PySet>> for &HashSet<T, Hasher>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -756,7 +756,7 @@ where
     }
 }
 
-impl<'a, T, Hasher> ToPython<Py<PyAny>> for &'a HashSet<T, Hasher>
+impl<T, Hasher> ToPython<Py<PyAny>> for &HashSet<T, Hasher>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -774,7 +774,7 @@ where
     }
 }
 
-impl<'a, T, P> ToPython<BTreeSet<P>> for &'a BTreeSet<T>
+impl<T, P> ToPython<BTreeSet<P>> for &BTreeSet<T>
 where
     T: ToPython<P> + Clone,
     // Hash is required for the ToPyObject impl
@@ -797,7 +797,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PySet>> for &'a BTreeSet<T>
+impl<T> ToPython<Py<PySet>> for &BTreeSet<T>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {
@@ -820,7 +820,7 @@ where
     }
 }
 
-impl<'a, T> ToPython<Py<PyAny>> for &'a BTreeSet<T>
+impl<T> ToPython<Py<PyAny>> for &BTreeSet<T>
 where
     T: ToPython<Py<PyAny>> + Clone,
 {

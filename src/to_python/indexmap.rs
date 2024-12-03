@@ -17,7 +17,7 @@ use pyo3::{types::PyDict, IntoPy, Py, PyAny, PyResult, Python, ToPyObject};
 
 use crate::ToPython;
 
-impl<'a, K1, K2, V1, V2, S> ToPython<IndexMap<K2, V2>> for &'a IndexMap<K1, V1, S>
+impl<K1, K2, V1, V2, S> ToPython<IndexMap<K2, V2>> for &IndexMap<K1, V1, S>
 where
     K1: ToPython<K2>,
     V1: ToPython<V2>,
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<'a, K, V, S> ToPython<Py<PyDict>> for &'a IndexMap<K, V, S>
+impl<K, V, S> ToPython<Py<PyDict>> for &IndexMap<K, V, S>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
     V: ToPython<Py<PyAny>>,
@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<'a, K, V, S> ToPython<Py<PyAny>> for &'a IndexMap<K, V, S>
+impl<K, V, S> ToPython<Py<PyAny>> for &IndexMap<K, V, S>
 where
     K: ToPython<Py<PyAny>> + std::fmt::Debug,
     V: ToPython<Py<PyAny>>,
