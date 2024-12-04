@@ -1,3 +1,9 @@
+## 0.4.2-rc.0
+
+### Fixes
+
+- trigger new release
+
 ## 0.4.1
 
 ### Features
