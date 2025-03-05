@@ -14,8 +14,12 @@
 
 //! Unifying conversion traits from Python to Rust data.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    hash::Hash,
+};
 
+use internment::ArcIntern;
 #[cfg(feature = "time")]
 use pyo3::{
     exceptions::PyValueError,
@@ -66,6 +70,15 @@ where
 impl<T, P> PyTryFrom<P> for Box<T>
 where
     T: PyTryFrom<P>,
+{
+    fn py_try_from(py: Python, item: &P) -> PyResult<Self> {
+        T::py_try_from(py, item).map(Self::new)
+    }
+}
+
+impl<T, P> PyTryFrom<P> for ArcIntern<T>
+where
+    T: PyTryFrom<P> + ?Sized + Eq + Hash + Send + Sync + 'static,
 {
     fn py_try_from(py: Python, item: &P) -> PyResult<Self> {
         T::py_try_from(py, item).map(Self::new)
@@ -343,7 +356,7 @@ impl_try_from_self_python!(PyDict);
 
 impl<K1, K2, V1, V2, Hasher> PyTryFrom<HashMap<K1, V1>> for HashMap<K2, V2, Hasher>
 where
-    K2: Eq + std::hash::Hash + PyTryFrom<K1>,
+    K2: Eq + Hash + PyTryFrom<K1>,
     V2: PyTryFrom<V1>,
     Hasher: std::hash::BuildHasher + Default,
 {
@@ -360,7 +373,7 @@ where
 
 impl<K, V, Hasher> PyTryFrom<Py<PyDict>> for HashMap<K, V, Hasher>
 where
-    K: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    K: Eq + Hash + PyTryFrom<PyAny>,
     V: PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
@@ -371,7 +384,7 @@ where
 
 impl<K, V, Hasher> PyTryFrom<PyDict> for HashMap<K, V, Hasher>
 where
-    K: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    K: Eq + Hash + PyTryFrom<PyAny>,
     V: PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
@@ -388,7 +401,7 @@ where
 
 impl<K, V, Hasher> PyTryFrom<PyAny> for HashMap<K, V, Hasher>
 where
-    K: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    K: Eq + Hash + PyTryFrom<PyAny>,
     V: PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
@@ -465,7 +478,7 @@ impl_try_from_self_python!(PyFrozenSet);
 
 impl<T, Hasher> PyTryFrom<Py<PyFrozenSet>> for HashSet<T, Hasher>
 where
-    T: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    T: Eq + Hash + PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
     fn py_try_from(py: Python, set: &Py<PyFrozenSet>) -> PyResult<Self> {
@@ -475,7 +488,7 @@ where
 
 impl<T, Hasher> PyTryFrom<PyFrozenSet> for HashSet<T, Hasher>
 where
-    T: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    T: Eq + Hash + PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
     fn py_try_from(py: Python, set: &PyFrozenSet) -> PyResult<Self> {
@@ -633,7 +646,7 @@ impl_try_from_self_python!(PySet);
 
 impl<T, P, Hasher> PyTryFrom<HashSet<P, Hasher>> for HashSet<T, Hasher>
 where
-    T: Eq + std::hash::Hash + PyTryFrom<P>,
+    T: Eq + Hash + PyTryFrom<P>,
     Hasher: std::hash::BuildHasher + Default,
 {
     fn py_try_from(py: Python, set: &HashSet<P, Hasher>) -> PyResult<Self> {
@@ -643,7 +656,7 @@ where
 
 impl<T, Hasher> PyTryFrom<Py<PySet>> for HashSet<T, Hasher>
 where
-    T: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    T: Eq + Hash + PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
     fn py_try_from(py: Python, set: &Py<PySet>) -> PyResult<Self> {
@@ -653,7 +666,7 @@ where
 
 impl<T, Hasher> PyTryFrom<PySet> for HashSet<T, Hasher>
 where
-    T: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    T: Eq + Hash + PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
     fn py_try_from(py: Python, set: &PySet) -> PyResult<Self> {
@@ -668,7 +681,7 @@ where
 
 impl<T, Hasher> PyTryFrom<PyAny> for HashSet<T, Hasher>
 where
-    T: Eq + std::hash::Hash + PyTryFrom<PyAny>,
+    T: Eq + Hash + PyTryFrom<PyAny>,
     Hasher: std::hash::BuildHasher + Default,
 {
     fn py_try_from(py: Python, item: &PyAny) -> PyResult<Self> {

@@ -15,8 +15,9 @@
 //! Unifying conversion traits from Rust data to Python.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::hash::BuildHasher;
+use std::hash::{BuildHasher, Hash};
 
+use internment::ArcIntern;
 use pyo3::conversion::IntoPy;
 
 use pyo3::types::{
@@ -66,9 +67,29 @@ where
     }
 }
 
+impl<T, P> ToPython<P> for &ArcIntern<T>
+where
+    T: ToPython<P> + ?Sized + Eq + Hash + Send + Sync + 'static,
+    P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<P> {
+        T::to_python(self, py)
+    }
+}
+
 impl<T, P> ToPython<P> for Box<T>
 where
     T: ToPython<P>,
+    P: ToPyObject,
+{
+    fn to_python(&self, py: Python) -> PyResult<P> {
+        T::to_python(self, py)
+    }
+}
+
+impl<T, P> ToPython<P> for ArcIntern<T>
+where
+    T: ToPython<P> + ?Sized + Eq + Hash + Send + Sync + 'static,
     P: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<P> {
@@ -329,7 +350,7 @@ impl<K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for &HashMap<K1, V1, Hash
 where
     K1: ToPython<K2>,
     V1: ToPython<V2>,
-    K2: ToPyObject + Eq + std::hash::Hash,
+    K2: ToPyObject + Eq + Hash,
     V2: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<HashMap<K2, V2>> {
@@ -373,7 +394,7 @@ impl<K1, K2, V1, V2, Hasher> ToPython<HashMap<K2, V2>> for HashMap<K1, V1, Hashe
 where
     K1: ToPython<K2>,
     V1: ToPython<V2>,
-    K2: ToPyObject + Eq + std::hash::Hash,
+    K2: ToPyObject + Eq + Hash,
     V2: ToPyObject,
 {
     fn to_python(&self, py: Python) -> PyResult<HashMap<K2, V2>> {
@@ -712,7 +733,7 @@ impl_for_self!(Py<PySet>);
 impl<T, P, Hasher> ToPython<HashSet<P, Hasher>> for &HashSet<T, Hasher>
 where
     T: ToPython<P> + Clone,
-    P: ToPyObject + std::hash::Hash + Eq,
+    P: ToPyObject + Hash + Eq,
     Hasher: Default + BuildHasher,
 {
     fn to_python(&self, py: Python) -> PyResult<HashSet<P, Hasher>> {
@@ -725,7 +746,7 @@ where
 impl<T, P, Hasher> ToPython<HashSet<P, Hasher>> for HashSet<T, Hasher>
 where
     T: ToPython<P> + Clone,
-    P: ToPyObject + std::hash::Hash + Eq,
+    P: ToPyObject + Hash + Eq,
     Hasher: Default + BuildHasher,
 {
     fn to_python(&self, py: Python) -> PyResult<HashSet<P, Hasher>> {
@@ -778,7 +799,7 @@ impl<T, P> ToPython<BTreeSet<P>> for &BTreeSet<T>
 where
     T: ToPython<P> + Clone,
     // Hash is required for the ToPyObject impl
-    P: ToPyObject + Ord + std::hash::Hash,
+    P: ToPyObject + Ord + Hash,
 {
     fn to_python(&self, py: Python) -> PyResult<BTreeSet<P>> {
         self.iter()
@@ -790,7 +811,7 @@ where
 impl<T, P> ToPython<BTreeSet<P>> for BTreeSet<T>
 where
     T: ToPython<P> + Clone,
-    P: ToPyObject + Ord + std::hash::Hash,
+    P: ToPyObject + Ord + Hash,
 {
     fn to_python(&self, py: Python) -> PyResult<BTreeSet<P>> {
         <&Self as ToPython<BTreeSet<P>>>::to_python(&self, py)
