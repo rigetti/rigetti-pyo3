@@ -78,7 +78,7 @@ where
 
 impl<T, P> PyTryFrom<P> for ArcIntern<T>
 where
-    T: PyTryFrom<P> + ?Sized + Eq + Hash + Send + Sync + 'static,
+    T: PyTryFrom<P> + Eq + Hash + Send + Sync + 'static,
 {
     fn py_try_from(py: Python, item: &P) -> PyResult<Self> {
         T::py_try_from(py, item).map(Self::new)

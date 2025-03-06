@@ -1,0 +1,4 @@
+allowed-duplicate-crates = [
+  # indexmap and (indirectly) dashmap require different hashbrown versions
+  "hashbrown",
+]
