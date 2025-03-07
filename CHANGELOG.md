@@ -1,3 +1,9 @@
+## 0.4.3
+
+### Features
+
+- add `ToPython` and `PyTryFrom` instances for `internment::ArcIntern` (#58)
+
 ## 0.4.3-rc.0
 
 ### Features
