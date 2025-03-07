@@ -27,7 +27,7 @@ macro_rules! impl_compare {
         impl $name {
             /// Implements all the Python comparison operators in terms of the
             /// Rust [`PartialOrd`](std::cmp::PartialOrd) instance.
-            #![allow(clippy::use_self)]
+            #[allow(clippy::use_self)]
             pub fn __richcmp__(&self, object: &Self, cmp: $crate::pyo3::basic::CompareOp) -> bool {
                 let result = ::std::cmp::PartialOrd::partial_cmp(self, object);
                 match cmp {
