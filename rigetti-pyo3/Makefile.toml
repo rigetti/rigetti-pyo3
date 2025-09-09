@@ -1,3 +1,5 @@
+extend = { path = "Makefile.toml", relative = "workspace" }
+
 [env]
     CARGO_HACK_COMMON_FLAGS = "--feature-powerset --exclude-features extension-module --mutually-exclusive-features abi3,time"
 
@@ -10,19 +12,6 @@
 
 [tasks.install-coverage-tools]
     install_crate = { rustup_component_name = "llvm-tools-preview" }
-
-[tasks.install-cargo-hack]
-    install_crate = { crate_name = "cargo-hack", min_version = "0.6.28", binary = "cargo-hack", test_arg = ["hack", "--help"] }
-
-[tasks.check]
-    clear = true
-    dependencies = ["install-cargo-hack"]
-    script = "cargo hack check $CARGO_HACK_COMMON_FLAGS --all-targets"
-
-[tasks.clippy]
-    clear = true
-    dependencies = ["install-clippy-any", "install-cargo-hack"]
-    script = "cargo hack clippy $CARGO_HACK_COMMON_FLAGS --all-targets"
 
 [tasks.coverage-tests]
     dependencies = ["install-coverage-tools"]
@@ -84,41 +73,6 @@
     command = "cargo"
     args = ["deadlinks", "--check-http", "--check-intra-doc-links"]
 
-[tasks.deny]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "all"]
-
-[tasks.deny-advisories]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "advisories"]
-
-[tasks.deny-ban]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "ban"]
-
-[tasks.deny-bans]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "bans"]
-
-[tasks.deny-license]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "license"]
-
-[tasks.deny-licenses]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "licenses"]
-
-[tasks.deny-sources]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "sources"]
-
 [tasks.geiger]
     install_crate = "cargo-geiger"
     command = "cargo"
@@ -143,11 +97,6 @@
     install_crate = "cargo-outdated"
     command = "cargo"
     args = ["outdated"]
-
-[tasks.test]
-    clear = true
-    dependencies = ["install-cargo-hack"]
-    script = "cargo hack test $CARGO_HACK_COMMON_FLAGS"
 
 [tasks.test-nextest]
     dependencies = ["install-cargo-hack"]

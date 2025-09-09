@@ -1,88 +1,66 @@
 name: Rust Check
 
-on: push
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
-    name: Cargo Check
+    name: Run Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            override: true
-      - uses: taiki-e/install-action@v1
-        with:
-            tool: cargo-hack@0.6.28,cargo-make
-      - run: cargo make check
-  clippy:
-    name: Clippy Lints
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            components: clippy
-            override: true
-      - uses: taiki-e/install-action@v1
-        with:
-            tool: cargo-hack@0.6.28,cargo-make
-      - run: cargo make clippy
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-deny
+      - uses: taiki-e/install-action@cargo-make
+
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo deny
+        run: cargo make deny
+
+      - name: Run Clippy
+        run: cargo make clippy
+
   deadlinks:
     name: Cargo Deadlinks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-make
+      - uses: taiki-e/install-action@v2
         with:
-            toolchain: stable
-            override: true
-      - uses: taiki-e/install-action@v1
-        with:
-            tool: cargo-deadlinks,cargo-make
-      - run: cargo make deadlinks
-  deny:
-    name: Cargo Deny
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        checks:
-          - advisories
-          - bans licenses sources
+          tool: cargo-deadlinks
+      - run: cargo make --cwd rigetti-pyo3 deadlinks
 
-    # Prevent sudden announcement of a new advisory from failing ci:
-    continue-on-error: ${{ matrix.checks == 'advisories' }}
-
-    steps:
-    - uses: actions/checkout@v2
-    - uses: EmbarkStudios/cargo-deny-action@v1
-      with:
-        command: check ${{ matrix.checks }}
   msrv:
     name: Cargo MSRV
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-make
+      - uses: taiki-e/install-action@v2
         with:
-            toolchain: stable
-            override: true
-      - uses: taiki-e/install-action@v1
-        with:
-            tool: cargo-msrv,cargo-make
-      - run: cargo make msrv-verify
+          tool: cargo-msrv
+      - run: cargo make --cwd rigetti-pyo3 msrv-verify
+
   test:
     name: Cargo Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            override: true
-      - uses: taiki-e/install-action@v1
-        with:
-            tool: cargo-hack@0.6.28,cargo-make
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-make
       - run: cargo make test

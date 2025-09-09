@@ -1,0 +1,34 @@
+[env]
+    CARGO_HACK_COMMON_FLAGS = "--feature-powerset"
+
+[tasks.install-cargo-hack]
+    install_crate = { crate_name = "cargo-hack", binary = "cargo-hack", test_arg = ["hack", "--help"] }
+
+[tasks.check]
+    clear = true
+    dependencies = ["install-cargo-hack"]
+    script = "cargo hack check $CARGO_HACK_COMMON_FLAGS --all-targets"
+
+[tasks.clippy]
+    clear = true
+    dependencies = ["install-clippy-any", "install-cargo-hack"]
+    script = "cargo hack clippy $CARGO_HACK_COMMON_FLAGS --all-targets"
+
+[tasks.deny]
+    install_crate = "cargo-deny"
+    command = "cargo"
+    args = ["deny", "--workspace", "--all-features", "check"]
+    workspace = false
+
+[tasks.test]
+    clear = true
+    dependencies = ["install-cargo-hack"]
+    script = "cargo hack test $CARGO_HACK_COMMON_FLAGS"
+
+[tasks.test-nextest]
+    dependencies = ["install-cargo-hack"]
+    install_crate = { crate_name = "cargo-nextest", binary = "cargo-nextest", test_arg = "--help" }
+    script = "cargo hack nextest run $CARGO_HACK_COMMON_FLAGS"
+
+[tasks.check-all]
+    dependencies = ["deny", "check", "test-nextest", "clippy"]
