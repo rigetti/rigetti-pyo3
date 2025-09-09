@@ -27,6 +27,7 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 #![deny(clippy::cargo)]
+#![allow(clippy::multiple_crate_versions)]
 #![warn(clippy::nursery)]
 // Conflicts with unreachable_pub
 #![allow(clippy::redundant_pub_crate)]
