@@ -1,18 +1,8 @@
 [env]
-    CARGO_HACK_COMMON_FLAGS = "--feature-powerset --exclude-features extension-module --mutually-exclusive-features abi3,time"
-
-[tasks.clean]
-    clear = true
-    script = """
-    rm -f *.profraw
-    cargo clean
-    """
-
-[tasks.install-coverage-tools]
-    install_crate = { rustup_component_name = "llvm-tools-preview" }
+    CARGO_HACK_COMMON_FLAGS = "--feature-powerset"
 
 [tasks.install-cargo-hack]
-    install_crate = { crate_name = "cargo-hack", min_version = "0.6.28", binary = "cargo-hack", test_arg = ["hack", "--help"] }
+    install_crate = { crate_name = "cargo-hack", binary = "cargo-hack", test_arg = ["hack", "--help"] }
 
 [tasks.check]
     clear = true
@@ -24,125 +14,11 @@
     dependencies = ["install-clippy-any", "install-cargo-hack"]
     script = "cargo hack clippy $CARGO_HACK_COMMON_FLAGS --all-targets"
 
-[tasks.coverage-tests]
-    dependencies = ["install-coverage-tools"]
-    script = "cargo test"
-[tasks.coverage-tests.env]
-    RUSTFLAGS = "-Cinstrument-coverage"
-    LLVM_PROFILE_FILE = ".coverage/coverage-%p-%m.profraw"
-
-[tasks.install-grcov]
-    dependencies = ["install-coverage-tools"]
-    install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--help" }
-
-[tasks.coverage-base]
-    dependencies = ["install-grcov", "coverage-tests"]
-    command = "grcov"
-    args = [
-        ".",
-        "-s", ".",
-        "--keep-only", "**/src/**", # Ignore files not in a src/ folder
-        "-p", "src",
-        "--binary-path", "./target/debug/",
-        "--ignore", "./tests",
-        "--ignore", "/*", # Ignore dependencies, whose source are in absolute path $HOME/.cargo/...
-        "-t", "${COVERAGE_OUTPUT_TYPE}",
-        "--branch",
-        "--llvm",
-        "--ignore-not-existing",
-        "-o", "${COVERAGE_OUTPUT_FILE}"
-    ]
-
-[tasks.coverage-html]
-    run_task = "coverage-base"
-[tasks.coverage-html.env]
-    COVERAGE_OUTPUT_TYPE = "html"
-    COVERAGE_OUTPUT_FILE = "./target/debug/coverage/"
-
-[tasks.view-coverage]
-    linux_alias = "view-coverage-linux"
-    mac_alias = "view-coverage-macos"
-    windows_alias = "view-coverage-windows"
-
-[tasks.view-coverage-linux]
-    dependencies = ["coverage-html"]
-    command = "xdg-open"
-    args = ["./target/debug/coverage/index.html"]
-
-[tasks.view-coverage-macos]
-    dependencies = ["coverage-html"]
-    command = "open"
-    args = ["./target/debug/coverage/index.html"]
-
-[tasks.view-coverage-windows]
-    dependencies = ["coverage-html"]
-    command = "cmd.exe"
-    args = ["/c", "start", "./target/debug/coverage/index.html"]
-
-[tasks.deadlinks]
-    install_crate = "cargo-deadlinks"
-    command = "cargo"
-    args = ["deadlinks", "--check-http", "--check-intra-doc-links"]
-
 [tasks.deny]
     install_crate = "cargo-deny"
     command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "all"]
-
-[tasks.deny-advisories]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "advisories"]
-
-[tasks.deny-ban]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "ban"]
-
-[tasks.deny-bans]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "bans"]
-
-[tasks.deny-license]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "license"]
-
-[tasks.deny-licenses]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "licenses"]
-
-[tasks.deny-sources]
-    install_crate = "cargo-deny"
-    command = "cargo"
-    args = ["deny", "check", "-c", "${CARGO_MAKE_WORKING_DIRECTORY}/deny.toml", "sources"]
-
-[tasks.geiger]
-    install_crate = "cargo-geiger"
-    command = "cargo"
-    args = ["geiger"]
-
-[tasks.license]
-    install_crate = "cargo-license"
-    command = "cargo"
-    args = ["license", "--all-features", "--avoid-dev-deps"]
-
-[tasks.msrv]
-    install_crate = "cargo-msrv"
-    command = "cargo"
-    args = ["msrv"]
-
-[tasks.msrv-verify]
-    install_crate = "cargo-msrv"
-    command = "cargo"
-    args = ["msrv", "verify"]
-
-[tasks.outdated]
-    install_crate = "cargo-outdated"
-    command = "cargo"
-    args = ["outdated"]
+    args = ["deny", "--workspace", "--all-features", "check"]
+    workspace = false
 
 [tasks.test]
     clear = true
@@ -155,4 +31,4 @@
     script = "cargo hack nextest run $CARGO_HACK_COMMON_FLAGS"
 
 [tasks.check-all]
-    dependencies = ["deny", "check", "test-nextest", "clippy", "deadlinks", "outdated", "msrv-verify"]
+    dependencies = ["deny", "check", "test-nextest", "clippy"]

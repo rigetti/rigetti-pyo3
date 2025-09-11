@@ -1,0 +1,30 @@
+name: Publish Crates
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    description: "Manually publish release"
+
+jobs:
+  publish-rigetti-pyo3:
+    if: ${{ github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'rigetti-pyo3/v') }}
+
+    runs-on: ubuntu-latest
+    name: Publish rigetti-pyo3
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo publish -p rigetti-pyo3 --locked --token ${{ secrets.CRATES_IO_TOKEN }}
+
+  publish-optipy:
+    if: ${{ github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'optipy/v') }}
+
+    runs-on: ubuntu-latest
+    name: Publish optipy
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          cargo publish -p optipy --locked --token ${{ secrets.CRATES_IO_TOKEN }}

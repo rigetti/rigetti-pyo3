@@ -1,0 +1,107 @@
+extend = { path = "Makefile.toml", relative = "workspace" }
+
+[env]
+    CARGO_HACK_COMMON_FLAGS = "--feature-powerset --exclude-features extension-module --mutually-exclusive-features abi3,time"
+
+[tasks.clean]
+    clear = true
+    script = """
+    rm -f *.profraw
+    cargo clean
+    """
+
+[tasks.install-coverage-tools]
+    install_crate = { rustup_component_name = "llvm-tools-preview" }
+
+[tasks.coverage-tests]
+    dependencies = ["install-coverage-tools"]
+    script = "cargo test"
+[tasks.coverage-tests.env]
+    RUSTFLAGS = "-Cinstrument-coverage"
+    LLVM_PROFILE_FILE = ".coverage/coverage-%p-%m.profraw"
+
+[tasks.install-grcov]
+    dependencies = ["install-coverage-tools"]
+    install_crate = { crate_name = "grcov", binary = "grcov", test_arg = "--help" }
+
+[tasks.coverage-base]
+    dependencies = ["install-grcov", "coverage-tests"]
+    command = "grcov"
+    args = [
+        ".",
+        "-s", ".",
+        "--keep-only", "**/src/**", # Ignore files not in a src/ folder
+        "-p", "src",
+        "--binary-path", "./target/debug/",
+        "--ignore", "./tests",
+        "--ignore", "/*", # Ignore dependencies, whose source are in absolute path $HOME/.cargo/...
+        "-t", "${COVERAGE_OUTPUT_TYPE}",
+        "--branch",
+        "--llvm",
+        "--ignore-not-existing",
+        "-o", "${COVERAGE_OUTPUT_FILE}"
+    ]
+
+[tasks.coverage-html]
+    run_task = "coverage-base"
+[tasks.coverage-html.env]
+    COVERAGE_OUTPUT_TYPE = "html"
+    COVERAGE_OUTPUT_FILE = "./target/debug/coverage/"
+
+[tasks.view-coverage]
+    linux_alias = "view-coverage-linux"
+    mac_alias = "view-coverage-macos"
+    windows_alias = "view-coverage-windows"
+
+[tasks.view-coverage-linux]
+    dependencies = ["coverage-html"]
+    command = "xdg-open"
+    args = ["./target/debug/coverage/index.html"]
+
+[tasks.view-coverage-macos]
+    dependencies = ["coverage-html"]
+    command = "open"
+    args = ["./target/debug/coverage/index.html"]
+
+[tasks.view-coverage-windows]
+    dependencies = ["coverage-html"]
+    command = "cmd.exe"
+    args = ["/c", "start", "./target/debug/coverage/index.html"]
+
+[tasks.deadlinks]
+    install_crate = "cargo-deadlinks"
+    command = "cargo"
+    args = ["deadlinks", "--check-http", "--check-intra-doc-links"]
+
+[tasks.geiger]
+    install_crate = "cargo-geiger"
+    command = "cargo"
+    args = ["geiger"]
+
+[tasks.license]
+    install_crate = "cargo-license"
+    command = "cargo"
+    args = ["license", "--all-features", "--avoid-dev-deps"]
+
+[tasks.msrv]
+    install_crate = "cargo-msrv"
+    command = "cargo"
+    args = ["msrv"]
+
+[tasks.msrv-verify]
+    install_crate = "cargo-msrv"
+    command = "cargo"
+    args = ["msrv", "verify"]
+
+[tasks.outdated]
+    install_crate = "cargo-outdated"
+    command = "cargo"
+    args = ["outdated"]
+
+[tasks.test-nextest]
+    dependencies = ["install-cargo-hack"]
+    install_crate = { crate_name = "cargo-nextest", binary = "cargo-nextest", test_arg = "--help" }
+    script = "cargo hack nextest run $CARGO_HACK_COMMON_FLAGS"
+
+[tasks.check-all]
+    dependencies = ["deny", "check", "test-nextest", "clippy", "deadlinks", "outdated", "msrv-verify"]
