@@ -1,3 +1,9 @@
+## 0.4.4 (2025-09-11)
+
+### Features
+
+- bump MSRV to support Cargo.lock v4
+
 ## 0.4.3
 
 ### Features
