@@ -1,7 +1,7 @@
 extend = { path = "Makefile.toml", relative = "workspace" }
 
 [env]
-    CARGO_HACK_COMMON_FLAGS = "--feature-powerset --exclude-features extension-module --mutually-exclusive-features abi3,time"
+    CARGO_HACK_COMMON_FLAGS = "--feature-powerset"
 
 [tasks.clean]
     clear = true

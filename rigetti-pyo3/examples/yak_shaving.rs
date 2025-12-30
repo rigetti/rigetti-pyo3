@@ -1,248 +1,210 @@
-use pyo3::{self, pymodule, types::PyModule, PyResult, Python};
+use pyo3::{prelude::*, pymodule, types::PyModule, PyResult, Python};
 
-pub mod rust {
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-    #[derive(Debug, thiserror::Error)]
-    #[error("can't shave a yak with clogged clippers!")]
-    pub struct CloggedClippersError;
+use rigetti_pyo3::{create_init_submodule, impl_repr};
 
-    #[derive(Clone, Default)]
-    pub struct Yak {
-        is_shaved: bool,
-    }
+#[derive(Debug, thiserror::Error)]
+#[error("can't shave a yak with clogged clippers!")]
+pub struct CloggedClippersError;
 
-    impl Yak {
-        pub fn new() -> Self {
-            Self { is_shaved: false }
-        }
+#[derive(Clone, Default, Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "yak_shaving")]
+pub struct Yak {
+    is_shaved: bool,
+}
 
-        pub fn new_shaved() -> Self {
-            Self { is_shaved: true }
-        }
-
-        pub fn is_shaved(&self) -> bool {
-            self.is_shaved
-        }
-
-        pub fn shave_with(&mut self, tool: &mut CuttingTool) -> Result<(), CloggedClippersError> {
-            if self.is_shaved() {
-                return Ok(());
-            }
-
-            match tool {
-                CuttingTool::Shears(_) => {
-                    self.is_shaved = true;
-                    Ok(())
-                }
-                CuttingTool::Clippers(clippers) => {
-                    if clippers.is_clogged {
-                        Err(CloggedClippersError)
-                    } else {
-                        clippers.is_clogged = true;
-                        self.is_shaved = true;
-                        Ok(())
-                    }
-                }
-            }
-        }
-    }
-
-    impl From<bool> for Yak {
-        fn from(is_shaved: bool) -> Self {
-            Self { is_shaved }
-        }
-    }
-
-    impl From<Yak> for bool {
-        fn from(yak: Yak) -> Self {
-            yak.is_shaved
-        }
-    }
-
-    #[derive(Clone, Default)]
-    pub struct Clippers {
-        is_clogged: bool,
-    }
-
-    impl Clippers {
-        pub fn new() -> Self {
-            Self { is_clogged: false }
-        }
-
-        pub fn unclog(&mut self) {
-            self.is_clogged = false;
-        }
-
-        pub fn is_clogged(&self) -> bool {
-            self.is_clogged
-        }
-    }
-
-    #[derive(Clone, Default)]
-    pub struct Shears;
-
-    #[derive(Clone)]
-    pub enum CuttingTool {
-        Shears(Shears),
-        Clippers(Clippers),
-    }
-
-    impl CuttingTool {
-        pub fn is_clogged(&self) -> bool {
-            matches!(self, Self::Clippers(Clippers { is_clogged: true }))
-        }
-
-        pub fn unclog(&mut self) {
-            if let Self::Clippers(clippers) = self {
-                clippers.unclog();
-            }
-        }
+impl Yak {
+    pub fn new() -> Self {
+        Self { is_shaved: false }
     }
 }
 
-pub mod python {
-    use crate::rust::{
-        Clippers, CloggedClippersError as RustCloggedClippers, CuttingTool, Shears, Yak,
-    };
-    use pyo3::exceptions::PyRuntimeError;
-    use pyo3::types::{PyBool, PyDict};
-    use pyo3::{pymethods, IntoPy, Py, PyErr, PyResult, Python};
-    use rigetti_pyo3::{
-        create_init_submodule, impl_as_mut_for_wrapper, py_wrap_error, py_wrap_struct,
-        py_wrap_type, py_wrap_union_enum, PyTryFrom, PyWrapper, PyWrapperMut, ToPython,
-        ToPythonError,
-    };
+impl_repr!(Yak);
 
-    create_init_submodule! {
-        classes: [ PyYak, PyShears, PyClippers, PyCuttingTool ],
-        errors: [ CloggedClippersError ],
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Yak {
+    #[new]
+    #[pyo3(signature = (is_shaved = false))]
+    fn __new__(is_shaved: bool) -> Self {
+        Self { is_shaved }
     }
 
-    py_wrap_error!(
-        yak_shaving,
-        // Renamed Rust error so the name can be used for the Python exception.
-        RustCloggedClippers,
-        // Name of Python exception.
-        CloggedClippersError,
-        PyRuntimeError
-    );
+    pub fn is_shaved(&self) -> bool {
+        self.is_shaved
+    }
 
-    // Don't need to manually convert between `Yak` and `PyYak` -- use conversion blocks for
-    // building from other types.
-    py_wrap_struct! {
-        PyYak(Yak) as "Yak" {
-            py -> rs {
-                py_dict: Py<PyDict> => Yak {
-                    let is_shaved: &PyBool = py_dict.as_ref(py).as_mapping().get_item("is_shaved")?.downcast()?;
-                    if is_shaved.is_true() {
-                        Ok::<_, PyErr>(Yak::new_shaved())
-                    } else {
-                        Ok(Yak::new())
-                    }
-                },
-                py_bool: Py<PyBool> => bool {
-                    bool::py_try_from(py, &py_bool)
+    pub fn shave_with<'py>(&mut self, tool: PyCuttingTool<'py>) -> PyResult<()> {
+        if self.is_shaved() {
+            return Ok(());
+        }
+
+        match tool {
+            PyCuttingTool::Shears(_) => {
+                self.is_shaved = true;
+            }
+            PyCuttingTool::Clippers(mut clippers) => {
+                if clippers.is_clogged {
+                    return Err(CloggedClippersError.into());
                 }
-            },
-            rs -> py {
-                yak: Yak => Py<PyDict> {
-                    let dict = PyDict::new(py);
-                    dict.set_item("is_shaved", yak.is_shaved())?;
-                    Ok(dict.into_py(py))
-                },
-                b: bool => Py<PyBool> {
-                    b.to_python(py)
-                }
+                clippers.is_clogged = true;
+                self.is_shaved = true;
             }
         }
+
+        Ok(())
+    }
+}
+
+impl From<bool> for Yak {
+    fn from(is_shaved: bool) -> Self {
+        Self { is_shaved }
+    }
+}
+
+impl From<Yak> for bool {
+    fn from(yak: Yak) -> Self {
+        yak.is_shaved
+    }
+}
+
+#[derive(Clone, Default)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "yak_shaving")]
+pub struct Clippers {
+    is_clogged: bool,
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Clippers {
+    #[new]
+    pub fn new() -> Self {
+        Self { is_clogged: false }
     }
 
-    #[pymethods]
-    impl PyYak {
-        pub fn shave_with(&mut self, _py: Python<'_>, tool: &mut PyCuttingTool) -> PyResult<()> {
-            self.as_inner_mut()
-                .shave_with(tool.as_inner_mut())
-                .map_err(RustCloggedClippers::to_py_err)
-        }
+    pub fn unclog(&mut self) {
+        self.is_clogged = false;
     }
 
-    py_wrap_type! {
-        #[derive(Default)]
-        PyShears(Shears) as "Shears";
+    pub fn is_clogged(&self) -> bool {
+        self.is_clogged
     }
+}
 
-    impl_as_mut_for_wrapper!(PyShears);
+#[derive(Clone, Default)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "yak_shaving")]
+pub struct Shears;
 
-    #[pymethods]
-    impl PyShears {
-        #[new]
-        pub fn new() -> Self {
-            Self::default()
-        }
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Shears {
+    #[new]
+    pub fn new() -> Self {
+        Self::default()
     }
+}
 
-    py_wrap_type! {
-        #[derive(Default)]
-        PyClippers(Clippers) as "Clippers";
+#[derive(Clone, FromPyObject)]
+pub enum CuttingTool {
+    Shears(Shears),
+    Clippers(Clippers),
+}
+
+pub enum PyCuttingTool<'a> {
+    Shears(PyRefMut<'a, Shears>),
+    Clippers(PyRefMut<'a, Clippers>),
+}
+
+impl<'py> FromPyObject<'_, 'py> for PyCuttingTool<'py> {
+    type Error = pyo3::PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(shears) = obj.cast::<Shears>() {
+            return Ok(PyCuttingTool::Shears(shears.borrow_mut()));
+        }
+
+        let clippers = obj.cast::<Clippers>()?.borrow_mut();
+        Ok(PyCuttingTool::Clippers(clippers))
     }
+}
 
-    impl_as_mut_for_wrapper!(PyClippers);
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::impl_stub_type!(PyCuttingTool<'_> = Shears | Clippers);
 
-    #[pymethods]
-    impl PyClippers {
-        #[new]
-        pub fn new() -> Self {
-            Self::default()
-        }
+mod errors {
+    use rigetti_pyo3::{create_exception, exception};
 
-        pub fn is_clogged(&self) -> bool {
-            self.as_inner().is_clogged()
-        }
+    create_exception!(
+        yak_shaving,
+        Error,
+        pyo3::exceptions::PyException,
+        "Base exception type for errors raised by this package."
+    );
 
-        pub fn unclog(&mut self) {
-            self.as_inner_mut().unclog()
-        }
+    exception!(
+        crate::CloggedClippersError,
+        yak_shaving,
+        CloggedClippersError,
+        Error,
+        "Error raised if clippers are clogged when trying to shave a yak."
+    );
+}
+
+mod tools {
+    use super::{errors, Clippers, Shears};
+    use rigetti_pyo3::create_init_submodule;
+
+    create_init_submodule! {
+        classes: [ Shears, Clippers ],
+        errors: [ errors::CloggedClippersError ],
     }
+}
 
-    py_wrap_union_enum! {
-        PyCuttingTool(CuttingTool) as "CuttingTool" {
-            shears: Shears => PyShears,
-            clippers: Clippers => PyClippers
-        }
-    }
-
-    #[pymethods]
-    impl PyCuttingTool {
-        pub fn is_clogged(&self) -> bool {
-            self.as_inner().is_clogged()
-        }
-
-        pub fn unclog(&mut self) {
-            self.as_inner_mut().unclog()
-        }
-    }
+create_init_submodule! {
+    classes: [ Yak ],
+    errors: [ errors::Error ],
+    submodules: [ "tools": tools::init_submodule ],
 }
 
 #[pymodule]
-fn yak_shaving(py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    python::init_submodule("yak_shaving", py, m)
+#[pyo3(name = "yak_shaving")]
+fn yak_shaving(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    use pyo3::types::PyStringMethods;
+    let py = m.py();
+    init_submodule(m.name()?.to_str()?, py, m)
 }
 
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::define_stub_info_gatherer!(stub_info);
+
 fn main() -> PyResult<()> {
+    use pyo3::ffi::c_str;
+
     pyo3::append_to_inittab!(yak_shaving);
-    pyo3::prepare_freethreaded_python();
-    Python::with_gil(|py| {
-        let code = r#"
-from yak_shaving import Yak, CuttingTool, Clippers, Shears, CloggedClippersError
+    Python::initialize();
 
-shears = CuttingTool(Shears())
-clippers = CuttingTool(Clippers())
+    Python::attach(|py| {
+        let code = c_str!(
+            r#"
+import yak_shaving
+from yak_shaving import Yak
+from yak_shaving.tools import Clippers, Shears, CloggedClippersError
 
-yak1 = Yak(False)
+shears = Shears()
+clippers = Clippers()
+
+yak1 = Yak()
 yak2 = Yak(False)
-yak3 = Yak(True)  # Already shaved
+yak3 = Yak(is_shaved=True)
 yak4 = Yak(False)
-yak5 = Yak({ "is_shaved": False })
+yak5 = Yak(is_shaved=False)
 
 yak1.shave_with(shears)
 yak2.shave_with(shears)
@@ -251,17 +213,24 @@ yak3.shave_with(clippers)
 yak4.shave_with(clippers)
 yak3.shave_with(clippers)
 
+assert clippers.is_clogged()
 try:
-    assert clippers.is_clogged()
     yak5.shave_with(clippers)
 except CloggedClippersError:
     pass
 
+assert clippers.is_clogged()
+try:
+    yak5.shave_with(clippers)
+except yak_shaving.Error:
+    pass
+
 clippers.unclog()
 yak5.shave_with(clippers)
-"#;
+"#
+        );
 
-        PyModule::from_code(py, code, "example.py", "example")?;
+        PyModule::from_code(py, code, c_str!("example.py"), c_str!("example"))?;
 
         Ok(())
     })

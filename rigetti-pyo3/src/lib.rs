@@ -1,4 +1,4 @@
-// Copyright 2022 Rigetti Computing
+// Copyright 2025 Rigetti Computing
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Helpful macros and traits for creating a Python wrapper of a Rust library.
-//!
-//! See [Macros](#macros) and [Traits](#traits) for the main items in this crate.
+//! Helpful macros and traits for creating a Python bindings to a Rust library.
 //!
 //! # Usage
 //!
@@ -68,92 +66,25 @@
     while_true
 )]
 
-use pyo3::PyErr;
-
-#[cfg(feature = "time")]
-pub mod datetime;
-mod py_try_from;
-mod sync;
-mod to_python;
+mod errors;
+#[cfg(feature = "stubs")]
+pub mod stubs;
+#[cfg(feature = "async-tokio")]
+pub mod sync;
 mod traits;
-mod wrappers;
 
-#[cfg(feature = "complex")]
-pub use num_complex;
-pub use paste;
-pub use py_try_from::PyTryFrom;
 pub use pyo3;
-pub use to_python::ToPython;
+#[cfg(feature = "async-tokio")]
+pub use pyo3_async_runtimes;
+#[cfg(feature = "stubs")]
+pub use pyo3_stub_gen;
+#[cfg(feature = "async-tokio")]
+pub use tokio;
 
-#[cfg(all(feature = "abi3", feature = "time"))]
-compile_error!(
-    "Cannot enable the time feature with the pyo3/abi3 feature, \
-     but you've asked for rigetti-pyo3 to be abi3-compatible."
-);
-
-/// Implemented by error types generated with [`py_wrap_error`].
-///
-/// Trait-ifies the ability to convert an error into a [`PyErr`](pyo3::PyErr).
-pub trait ToPythonError {
-    /// Convert this error into a [`PyErr`](pyo3::PyErr).
-    fn to_py_err(self) -> PyErr;
-}
-
-impl ToPythonError for PyErr {
-    fn to_py_err(self) -> PyErr {
-        self
-    }
-}
-
-impl ToPythonError for std::convert::Infallible {
-    fn to_py_err(self) -> PyErr {
-        unreachable!("Infallible can never happen")
-    }
-}
-
-/// Implemented by wrapper types generated with `py_wrap_*` macros:
-///
-/// - [`py_wrap_struct`]
-/// - [`py_wrap_union_enum`]
-/// - [`py_wrap_simple_enum`]
-/// - [`py_wrap_type`]
-pub trait PyWrapper: From<Self::Inner> + Into<Self::Inner> + AsRef<Self::Inner> {
-    /// The Rust type being wrapped.
-    type Inner;
-
-    /// Returns a reference to the inner item.
-    ///
-    /// Like [`AsRef`], but doesn't require generics.
-    fn as_inner(&self) -> &Self::Inner {
-        self.as_ref()
-    }
-
-    /// Converts this into the inner item.
-    ///
-    /// Like [`Into`], but doesn't require generics.
-    fn into_inner(self) -> Self::Inner {
-        self.into()
-    }
-}
-
-/// Implemented by wrapper types containing the source type, generated with `py_wrap_*` macros:
-///
-/// - [`py_wrap_struct`]
-/// - [`py_wrap_union_enum`]
-/// - [`py_wrap_type`]
-///
-/// The notable exception is [`py_wrap_simple_enum`], where it does not make sense to have a mutable
-/// reference to a unit enum.
-pub trait PyWrapperMut: PyWrapper + AsMut<Self::Inner> {
-    /// Returns a mutable reference to the inner item.
-    ///
-    /// Like [`AsMut`], but doesn't require generics.
-    fn as_inner_mut(&mut self) -> &mut Self::Inner {
-        self.as_mut()
-    }
-}
-
-impl<T> PyWrapperMut for T where T: PyWrapper + AsMut<Self::Inner> {}
+use pyo3::{
+    prelude::*,
+    types::{PyList, PyTuple, PyType, PyTypeMethods},
+};
 
 /// Create a crate-private function `init_submodule` to set up this submodule and call the same
 /// function on child modules (which should also use this macro).
@@ -168,45 +99,43 @@ impl<T> PyWrapperMut for T where T: PyWrapper + AsMut<Self::Inner> {}
 /// # Example
 ///
 /// ```
-/// use rigetti_pyo3::{py_wrap_type, py_wrap_error, wrap_error, create_init_submodule};
-/// use rigetti_pyo3::pyo3::{pyfunction, pymodule, Python, PyResult, types::PyModule};
-/// use rigetti_pyo3::pyo3::exceptions::PyRuntimeError;
+/// use rigetti_pyo3::{create_init_submodule, exception, create_exception};
+/// use rigetti_pyo3::pyo3::{prelude::*, exceptions::PyException};
 ///
 /// #[pyfunction]
 /// fn do_nothing() {}
 ///
-/// py_wrap_type! {
-///     PyCoolString(String) as "CoolString";
-/// }
+/// #[pyclass]
+/// struct CoolString(String);
 ///
-/// wrap_error!{
-///     RustIOError(std::io::Error);
-/// }
+/// #[derive(Debug, thiserror::Error)]
+/// #[error("io error: {0}")]
+/// struct RustIOError(#[from] std::io::Error);
 ///
-/// py_wrap_error!(errors, RustIOError, IOError, PyRuntimeError);
+/// exception!(RustIOError, "example", IOError, PyException, "IO Error");
 ///
 /// mod my_submodule {
-///     use rigetti_pyo3::{py_wrap_type, create_init_submodule};
-///     
-///     py_wrap_type! {
-///         PyCoolInt(i32) as "CoolInt";
-///     }
+///     use rigetti_pyo3::{create_init_submodule};
+///     use rigetti_pyo3::pyo3::pyclass;
+///
+///     #[pyclass]
+///     struct CoolInt(i32);
 ///
 ///     create_init_submodule! {
-///         classes: [ PyCoolInt ],
+///         classes: [ CoolInt ],
 ///     }
 /// }
 ///
 /// create_init_submodule! {
 ///     /// Initialize this module and all its submodules
-///     classes: [ PyCoolString ],
+///     classes: [ CoolString ],
 ///     errors: [ IOError ],
 ///     funcs: [ do_nothing ],
 ///     submodules: [ "my_submodule": my_submodule::init_submodule ],
 /// }
 ///
 /// #[pymodule]
-/// fn example(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+/// fn example(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     init_submodule("example", py, m)
 /// }
 /// ```
@@ -215,36 +144,153 @@ macro_rules! create_init_submodule {
     (
         $(#[$meta:meta])*
         $(classes: [ $($class: ty),+ ],)?
+        $(complex_enums: [ $($complex_enum: ty),+ ],)?
         $(consts: [ $($const: ident),+ ],)?
         $(errors: [ $($error: ty),+ ],)?
         $(funcs: [ $($func: path),+ ],)?
         $(submodules: [ $($mod_name: literal: $init_submod: path),+ ],)?
     ) => {
         $(#[$meta])*
-        pub(crate) fn init_submodule(_name: &str, _py: $crate::pyo3::Python, m: &$crate::pyo3::types::PyModule) -> $crate::pyo3::PyResult<()> {
+        pub(crate) fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {
             $($(
-            m.add_class::<$class>()?;
+            $crate::pyo3::types::PyModuleMethods::add_class::<$class>(m)?;
             )+)?
             $($(
-            m.add(::std::stringify!($const), $crate::ToPython::<$crate::pyo3::Py<$crate::pyo3::PyAny>>::to_python(&$const, _py)?)?;
+            $crate::pyo3::types::PyModuleMethods::add_class::<$complex_enum>(m)?;
             )+)?
             $($(
-            m.add(std::stringify!($error), _py.get_type::<$error>())?;
+                $crate::pyo3::types::PyModuleMethods::add(m,
+                    ::std::stringify!($const),
+                    $crate::pyo3::IntoPyObject::into_pyobject(&$const, _py)?
+                )?;
             )+)?
             $($(
-            m.add_function($crate::pyo3::wrap_pyfunction!($func, m)?)?;
+                $crate::pyo3::types::PyModuleMethods::add(m,
+                    $crate::pyo3::types::PyTypeMethods::name(&_py.get_type::<$error>())?,
+                    _py.get_type::<$error>()
+                )?;
+            )+)?
+            $($(
+            $crate::pyo3::types::PyModuleMethods::add_function(m, $crate::pyo3::wrap_pyfunction!($func, m)?)?;
             )+)?
             $(
-                let modules = _py.import("sys")?.getattr("modules")?;
+                let sys = $crate::pyo3::types::PyModule::import(_py, "sys")?;
+                let modules = $crate::pyo3::types::PyAnyMethods::getattr(sys.as_any(), "modules")?;
                 $(
                 let qualified_name = format!("{}.{}", _name, $mod_name);
-                let submod = $crate::pyo3::types::PyModule::new(_py, &qualified_name)?;
-                $init_submod(&qualified_name, _py, submod)?;
-                m.add($mod_name, submod)?;
-                modules.set_item(&qualified_name, submod)?;
+                let submod = $crate::pyo3::types::PyModule::new(_py, $mod_name)?;
+                $init_submod(&qualified_name, _py, &submod)?;
+                $crate::pyo3::types::PyModuleMethods::add_submodule(m, &submod)?;
+                $crate::pyo3::types::PyAnyMethods::set_item(modules.as_any(), &qualified_name, &submod)?;
                 )+
             )?
+            $($(
+            $crate::fix_enum_qual_names(&_py.get_type::<$complex_enum>())?;
+            )+)?
             Ok(())
         }
     }
+}
+
+/// Fix the `__qualname__` on PyO3's "complex enums" so that they can be pickled.
+///
+/// Essentially, this runs the following Python code:
+///
+/// ```python
+/// import inspect
+/// issubclass = lambda cls: inspect.isclass(cls) and issubclass(cls, typ)
+/// for name, cls in inspect.getmembers(typ, issubclass):
+///     cls.__qualname__ = f"{prefix}.{name}"
+/// ```
+///
+/// # In a Pickle
+///
+/// PyO3 processes `enum`s with non-unit variants by creating a Python class for the enum,
+/// then creating a class for each variant, subclassed from the main enum class.
+/// The subclasses end up as attributes on the main enum class,
+/// which enables syntax like `q = Qubit.Fixed(0)`;
+/// however, they're given qualified names that use `_` as a seperator instead of `.`,
+/// e.g. we get `Qubit.Fixed(0).__qualname__ == "Qubit_Fixed"`
+/// rather than `Qubit.Fixed`, as we would if we had written the inner class ourselves.
+/// As a consequence, attempting to `pickle` an instance of it
+/// will raise an error complaining that `quil.instructions.Qubit_Fixed` can't be found.
+///
+/// There are a handful of ways of making this work,
+/// but modifying the `__qualname__` seems not only simple, but correct.
+///
+/// # See Also
+///
+/// - PyO3's Complex Enums: <https://pyo3.rs/v0.25.1/class#complex-enums>
+/// - Issue regarding `__qualname__`: <https://github.com/PyO3/pyo3/issues/5270>
+/// - Python's `inspect`: <https://docs.python.org/3/library/inspect.html#inspect.getmembers>
+pub fn fix_enum_qual_names(typ: &Bound<'_, PyType>) -> PyResult<()> {
+    let py = typ.py();
+    let inspect = PyModule::import(py, "inspect")?;
+    let isclass = inspect.getattr("isclass")?;
+    let get_members = inspect.getattr("getmembers")?;
+
+    let prefix = typ.qualname()?;
+    let prefix = prefix.as_borrowed();
+    let prefix = prefix.to_str()?;
+
+    let inner: Bound<'_, PyList> = get_members.call((typ, isclass), None)?.cast_into()?;
+    for item in &inner {
+        let item = item.cast::<PyTuple>()?;
+
+        let cls = item.get_borrowed_item(1)?;
+        if cls.cast()?.is_subclass(typ)? {
+            // See https://pyo3.rs/v0.25.1/types#borroweda-py-t for info on `get_borrowed_item`.
+            let name = item.get_borrowed_item(0)?;
+            let fixed_name = format!("{prefix}.{}", name.cast()?.to_str()?);
+            cls.setattr(pyo3::intern!(py, "__qualname__"), fixed_name)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Fix the `__qualname__` on a list of complex enums so that they can be pickled.
+/// See [`fix_enum_qual_names`] for more information.
+///
+/// The first argument should be a `Python<'py>` instance;
+/// all others should be names of `#[pyclass]`-annotated `enum`s with non-unit variants.
+///
+/// # Example
+///
+/// ```ignore
+/// use pyo3;
+/// use pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum;
+///
+/// #[pyo3::pymodule(name = "place", module = "some", submodule)]
+/// fn init_some_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+///   let py = m.py();
+///
+///   m.add_class::<Foo>()?;
+///   m.add_class::<Bar>()?;
+///
+///   fix_complex_enums!(py, Foo, Bar);
+/// }
+///
+/// #[gen_stub_pyclass_complex_enum]
+/// #[pyo3::pyclass(module = "some.place", eq, frozen, hash, get_all)]
+/// pub enum Foo {
+///     Integer(i64),
+///     Real(f64),
+/// }
+///
+/// #[gen_stub_pyclass_complex_enum]
+/// #[pyo3::pyclass(module = "some.place", eq, frozen, hash, get_all)]
+/// pub enum Bar {
+///     Integer(i64),
+///     Real(f64),
+/// }
+/// ```
+#[macro_export]
+macro_rules! fix_complex_enums {
+    ($py:expr, $($name:path),* $(,)?) => {
+        {
+            let py = $py;
+            $($crate::fix_enum_qual_names(&py.get_type::<$name>())?;)*
+        }
+    };
 }
