@@ -12,6 +12,47 @@ use std::marker::PhantomData;
 /// This type makes it clear that the function is in fact async (that it should be `await`ed),
 /// and it provides access to the actual return type,
 /// which enables a `PyStubType` implementation, and hence automatic stub generation.
+///
+/// # Example
+///
+/// ```
+/// use pyo3::prelude::*;
+/// use pyo3::py_run;
+/// use pyo3_async_runtimes::tokio::future_into_py;
+/// use rigetti_pyo3::sync::Awaitable;
+///
+/// fn main() {
+/// #[pyclass]
+/// struct MyClass {
+///     message: String,
+/// }
+///
+/// #[pymethods]
+/// impl MyClass {
+///     fn get_message<'py>(&self, py: Python<'py>) -> PyResult<Awaitable<'py, String>> {
+///         let msg = self.message.clone();
+///         future_into_py(py, async move { Ok(msg) }).map(Into::into)
+///     }
+/// }
+///
+/// Python::initialize();
+/// Python::attach(|py| {
+///     let data = MyClass { message: "hello, world!".to_string() };
+///     let data = Py::new(py, data).unwrap();
+///     let MyClass = py.get_type::<MyClass>();
+///
+///     py_run!(py, data MyClass, r#"
+/// import asyncio
+///
+/// async def check_message(inst: MyClass) -> None:
+///     message = await inst.get_message()
+///     assert message == "hello, world!"
+///
+/// asyncio.run(check_message(data))
+///         "#);
+/// })
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Awaitable<'py, T>(pub Bound<'py, PyAny>, PhantomData<T>);
 
@@ -47,6 +88,12 @@ impl<'a, 'py, T> IntoPyObject<'py> for &'a Awaitable<'py, T> {
 
     fn into_pyobject(self, _: Python<'py>) -> Result<Self::Output, Self::Error> {
         Ok(self.0.as_borrowed())
+    }
+}
+
+impl <'py, T> From<Bound<'py, PyAny>> for Awaitable<'py, T> {
+    fn from(obj: Bound<'py, PyAny>) -> Self {
+        Awaitable::new(obj)
     }
 }
 
