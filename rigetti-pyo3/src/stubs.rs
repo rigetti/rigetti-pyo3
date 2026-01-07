@@ -39,7 +39,7 @@ use pyo3_stub_gen::{
     StubInfo, TypeInfo,
 };
 
-/// Destructively sort all the unsorted components of a [`StubInfo`].
+/// Sort, in place, all the unsorted components of a [`StubInfo`].
 ///
 /// See the module-level documentation for more information.
 pub fn sort(stub: &mut StubInfo) {
