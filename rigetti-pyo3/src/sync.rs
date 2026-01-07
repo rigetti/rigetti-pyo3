@@ -92,7 +92,7 @@ impl<'a, 'py, T> IntoPyObject<'py> for &'a Awaitable<'py, T> {
     }
 }
 
-impl <'py, T> From<Bound<'py, PyAny>> for Awaitable<'py, T> {
+impl<'py, T> From<Bound<'py, PyAny>> for Awaitable<'py, T> {
     fn from(obj: Bound<'py, PyAny>) -> Self {
         Awaitable::new(obj)
     }

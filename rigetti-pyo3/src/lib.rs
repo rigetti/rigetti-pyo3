@@ -261,8 +261,7 @@ fn fix_enum_qual_names_impl<'py>(
     typ: &Bound<'py, PyType>,
     is_class: &Bound<'py, PyAny>,
     get_members: &Bound<'py, PyAny>,
-    ) -> PyResult<()>
-{
+) -> PyResult<()> {
     // The additional bindings here are necessary to avoid dropping temporaries.
     let prefix = typ.qualname()?;
     let prefix = prefix.to_str()?;
@@ -396,12 +395,12 @@ macro_rules! fix_complex_enums {
 
 #[cfg(test)]
 mod test {
-    use pyo3::{py_run, prelude::*};
     use pyo3::types::{PyDict, PyTuple};
+    use pyo3::{prelude::*, py_run};
 
     #[pyclass(module = "mymod")]
     enum Foo {
-        Integer{ value: i64 },
+        Integer { value: i64 },
         Real { value: f64 },
     }
 
@@ -425,8 +424,8 @@ mod test {
     impl Bar {
         fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
             match self {
-                Self::Integer (value) => PyTuple::new(py, [value]),
-                Self::Real (value) => PyTuple::new(py, [value]),
+                Self::Integer(value) => PyTuple::new(py, [value]),
+                Self::Real(value) => PyTuple::new(py, [value]),
             }
         }
     }
@@ -442,24 +441,24 @@ mod test {
     impl Baz {
         fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
             match self {
-                Self::Integer (value) => PyTuple::new(py, [value]),
-                Self::Real (value) => PyTuple::new(py, [value]),
+                Self::Integer(value) => PyTuple::new(py, [value]),
+                Self::Real(value) => PyTuple::new(py, [value]),
             }
         }
     }
 
     #[pymodule(name = "mymod")]
     fn mymod(m: &Bound<'_, PyModule>) -> PyResult<()> {
-      let py = m.py();
+        let py = m.py();
 
-      m.add_class::<Foo>()?;
-      m.add_class::<Bar>()?;
-      m.add_class::<Baz>()?;
+        m.add_class::<Foo>()?;
+        m.add_class::<Bar>()?;
+        m.add_class::<Baz>()?;
 
-      // Baz intentionally excluded.
-      fix_complex_enums!(py, Foo, Bar);
+        // Baz intentionally excluded.
+        fix_complex_enums!(py, Foo, Bar);
 
-      Ok(())
+        Ok(())
     }
 
     #[test]
@@ -468,7 +467,10 @@ mod test {
         Python::initialize();
         Python::attach(|py| {
             let locals = PyDict::new(py);
-            py_run!(py, *locals, r#"
+            py_run!(
+                py,
+                *locals,
+                r#"
 import pickle
 import mymod
 from mymod import Foo
