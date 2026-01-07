@@ -60,18 +60,6 @@ impl Yak {
     }
 }
 
-impl From<bool> for Yak {
-    fn from(is_shaved: bool) -> Self {
-        Self { is_shaved }
-    }
-}
-
-impl From<Yak> for bool {
-    fn from(yak: Yak) -> Self {
-        yak.is_shaved
-    }
-}
-
 #[derive(Clone, Default)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(module = "yak_shaving")]
@@ -227,6 +215,8 @@ except yak_shaving.Error:
 
 clippers.unclog()
 yak5.shave_with(clippers)
+
+print(f"{yak1=} {yak2=} {yak3=} {yak4=} {yak5=}")
 "#
         );
 
