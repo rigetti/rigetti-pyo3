@@ -2,3 +2,6 @@
 members = ["rigetti-pyo3", "optipy"]
 resolver = "2"
 
+[workspace.dependencies]
+optipy = { path = "optipy", version = "0.1.0" }
+

@@ -87,6 +87,7 @@ impl<T: ArbitraryOrd> Ord for Arbitrary<'_, T> {
     }
 }
 
+/// Implements [`ArbitraryOrd`] for structs with named fields.
 macro_rules! arbitrary_ord_structs {
     ($(
         $struct:ident { $($field:ident),* $(,)? };
@@ -170,10 +171,10 @@ impl<K: Ord, V: ArbitraryOrd> ArbitraryOrd for IndexMap<K, V> {
 impl ArbitraryOrd for IgnoreTarget {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (IgnoreTarget::All, IgnoreTarget::All) => Ordering::Equal,
-            (IgnoreTarget::All, IgnoreTarget::Specified(_)) => Ordering::Less,
-            (IgnoreTarget::Specified(_), IgnoreTarget::All) => Ordering::Greater,
-            (IgnoreTarget::Specified(left), IgnoreTarget::Specified(right)) => left.cmp(right),
+            (Self::All, Self::All) => Ordering::Equal,
+            (Self::All, Self::Specified(_)) => Ordering::Less,
+            (Self::Specified(_), Self::All) => Ordering::Greater,
+            (Self::Specified(left), Self::Specified(right)) => left.cmp(right),
         }
     }
 }
@@ -181,19 +182,12 @@ impl ArbitraryOrd for IgnoreTarget {
 impl ArbitraryOrd for MethodType {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (MethodType::Instance, MethodType::Instance) => Ordering::Equal,
-            (MethodType::Instance, _) => Ordering::Less,
-            (_, MethodType::Instance) => Ordering::Greater,
-
-            (MethodType::Static, MethodType::Static) => Ordering::Equal,
-            (MethodType::Static, _) => Ordering::Less,
-            (_, MethodType::Static) => Ordering::Greater,
-
-            (MethodType::Class, MethodType::Class) => Ordering::Equal,
-            (MethodType::Class, _) => Ordering::Less,
-            (_, MethodType::Class) => Ordering::Greater,
-
-            (MethodType::New, MethodType::New) => Ordering::Equal,
+            (Self::Instance, Self::Instance)
+            | (Self::Static, Self::Static)
+            | (Self::Class, Self::Class)
+            | (Self::New, Self::New) => Ordering::Equal,
+            (Self::Instance | Self::Static | Self::Class, _) => Ordering::Less,
+            (_, Self::Instance | Self::Static | Self::Class) => Ordering::Greater,
         }
     }
 }
@@ -201,25 +195,25 @@ impl ArbitraryOrd for MethodType {
 impl ArbitraryOrd for ParameterKind {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (ParameterKind::PositionalOnly, ParameterKind::PositionalOnly) => Ordering::Equal,
-            (ParameterKind::PositionalOnly, _) => Ordering::Less,
-            (_, ParameterKind::PositionalOnly) => Ordering::Greater,
-
-            (ParameterKind::PositionalOrKeyword, ParameterKind::PositionalOrKeyword) => {
-                Ordering::Equal
-            }
-            (ParameterKind::PositionalOrKeyword, _) => Ordering::Less,
-            (_, ParameterKind::PositionalOrKeyword) => Ordering::Greater,
-
-            (ParameterKind::KeywordOnly, ParameterKind::KeywordOnly) => Ordering::Equal,
-            (ParameterKind::KeywordOnly, _) => Ordering::Less,
-            (_, ParameterKind::KeywordOnly) => Ordering::Greater,
-
-            (ParameterKind::VarPositional, ParameterKind::VarPositional) => Ordering::Equal,
-            (ParameterKind::VarPositional, _) => Ordering::Less,
-            (_, ParameterKind::VarPositional) => Ordering::Greater,
-
-            (ParameterKind::VarKeyword, ParameterKind::VarKeyword) => Ordering::Equal,
+            (Self::PositionalOnly, Self::PositionalOnly)
+            | (Self::PositionalOrKeyword, Self::PositionalOrKeyword)
+            | (Self::KeywordOnly, Self::KeywordOnly)
+            | (Self::VarPositional, Self::VarPositional)
+            | (Self::VarKeyword, Self::VarKeyword) => Ordering::Equal,
+            (
+                Self::PositionalOnly
+                | Self::PositionalOrKeyword
+                | Self::KeywordOnly
+                | Self::VarPositional,
+                _,
+            ) => Ordering::Less,
+            (
+                _,
+                Self::PositionalOrKeyword
+                | Self::PositionalOnly
+                | Self::KeywordOnly
+                | Self::VarPositional,
+            ) => Ordering::Greater,
         }
     }
 }
@@ -227,10 +221,10 @@ impl ArbitraryOrd for ParameterKind {
 impl ArbitraryOrd for ParameterDefault {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (ParameterDefault::None, ParameterDefault::None) => Ordering::Equal,
-            (ParameterDefault::None, _) => Ordering::Less,
-            (_, ParameterDefault::None) => Ordering::Greater,
-            (ParameterDefault::Expr(x), ParameterDefault::Expr(y)) => x.cmp(y),
+            (Self::None, Self::None) => Ordering::Equal,
+            (Self::None, _) => Ordering::Less,
+            (_, Self::None) => Ordering::Greater,
+            (Self::Expr(x), Self::Expr(y)) => x.cmp(y),
         }
     }
 }
@@ -250,6 +244,7 @@ arbitrary_ord_structs! {
 // anything or there are any changes, we aggressively over-annotate all the types.  This allows
 // seeing immediately where sorting bottoms out.
 
+/// Sort elements of a class definition.
 fn sort_class(class: &mut ClassDef) {
     let ClassDef {
         name,
@@ -283,6 +278,7 @@ fn sort_class(class: &mut ClassDef) {
     <[ClassDef]>::sort_by(classes, ArbitraryOrd::cmp);
 }
 
+/// Sort elements of an enum definition.
 fn sort_enum(r#enum: &mut EnumDef) {
     let EnumDef {
         name,
@@ -305,6 +301,7 @@ fn sort_enum(r#enum: &mut EnumDef) {
     <[MemberDef]>::sort_by(setters, ArbitraryOrd::cmp);
 }
 
+/// Sort elements of a module definition.
 fn sort_module(module: &mut Module) {
     let Module {
         doc,

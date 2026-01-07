@@ -107,7 +107,7 @@ pub struct Shears;
 impl Shears {
     #[new]
     pub fn new() -> Self {
-        Self::default()
+        Self
     }
 }
 

@@ -21,7 +21,7 @@ use std::marker::PhantomData;
 /// use pyo3_async_runtimes::tokio::future_into_py;
 /// use rigetti_pyo3::sync::Awaitable;
 ///
-/// fn main() {
+/// # fn main() {
 /// #[pyclass]
 /// struct MyClass {
 ///     message: String,
@@ -51,14 +51,15 @@ use std::marker::PhantomData;
 /// asyncio.run(check_message(data))
 ///         "#);
 /// })
-/// }
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct Awaitable<'py, T>(pub Bound<'py, PyAny>, PhantomData<T>);
 
 impl<'py, T> Awaitable<'py, T> {
     /// Create a new `Awaitable` from a Python object.
-    pub fn new(obj: Bound<'py, PyAny>) -> Self {
+    #[must_use]
+    pub const fn new(obj: Bound<'py, PyAny>) -> Self {
         Awaitable(obj, PhantomData)
     }
 }
@@ -98,7 +99,7 @@ impl <'py, T> From<Bound<'py, PyAny>> for Awaitable<'py, T> {
 }
 
 #[cfg(feature = "stubs")]
-impl<'py, T> PyStubType for Awaitable<'py, T>
+impl<T> PyStubType for Awaitable<'_, T>
 where
     T: PyStubType,
 {
@@ -169,6 +170,8 @@ macro_rules! py_async {
     };
 }
 
+/// Generate sync and async functions from a single implementation of an async function.
+///
 /// Given a single implementation of an async function,
 /// create that function as private and two pyfunctions
 /// named after it that can be used to invoke either
@@ -292,6 +295,7 @@ pub fn add_context_if_otel<T>(res: T) -> opentelemetry::trace::WithContext<T> {
 
 /// Acts as an identity function, as the `opentelemetry` feature was not enabled at build time.
 #[cfg(not(feature = "opentelemetry"))]
-pub fn add_context_if_otel<T>(res: T) -> T {
+#[inline]
+pub const fn add_context_if_otel<T>(res: T) -> T {
     res
 }
