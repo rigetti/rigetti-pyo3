@@ -98,7 +98,7 @@ use pyo3::{prelude::*, types::PyType};
 /// ```
 /// # fn main() {
 /// use rigetti_pyo3::{create_init_submodule, exception, create_exception};
-/// use rigetti_pyo3::pyo3::{prelude::*, exceptions::PyException};
+/// use rigetti_pyo3::pyo3::{prelude::*, exceptions::PyIOError};
 ///
 /// #[pyfunction]
 /// fn do_nothing() {}
@@ -110,7 +110,7 @@ use pyo3::{prelude::*, types::PyType};
 /// #[error("io error: {0}")]
 /// struct RustIOError(#[from] std::io::Error);
 ///
-/// exception!(RustIOError, "example", IOError, PyException, "IO Error");
+/// exception!(RustIOError, "example", IOError, PyIOError, "IO Error");
 ///
 /// mod my_submodule {
 ///     use rigetti_pyo3::create_init_submodule;
@@ -183,9 +183,9 @@ macro_rules! create_init_submodule {
                 $crate::pyo3::types::PyAnyMethods::set_item(modules.as_any(), &qualified_name, &submod)?;
                 )+
             )?
-            $($(
-            $crate::fix_enum_qual_names(&_py.get_type::<$complex_enum>())?;
-            )+)?
+            $(
+                $crate::fix_complex_enums!(_py, $($complex_enum),+);
+            )?
             Ok(())
         }
     }
