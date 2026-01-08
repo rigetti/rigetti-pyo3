@@ -58,7 +58,7 @@ macro_rules! create_exception {
 #[macro_export]
 macro_rules! exception {
     ( $rust_err: ty, $module:expr, $py_err: ident, $base: ty $(, $doc: expr)? ) => {
-        create_exception!( $module, $py_err, $base $(, $doc)? );
+        $crate::create_exception!( $module, $py_err, $base $(, $doc)? );
 
         #[doc = concat!(
             "Convert a Rust ",
