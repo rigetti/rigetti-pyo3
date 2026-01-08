@@ -234,7 +234,7 @@ macro_rules! py_function_sync_async {
         }
 
         $(#[$meta])+
-        #[allow(clippy::too_many_arguments, clippy::missing_docs)]
+        #[allow(clippy::too_many_arguments)]
         #[pyo3(name = $name "")]
         $pub fn [< py_ $name >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> PyResult<$ret>)? {
             let res = $crate::sync::add_context_if_otel([< $name _impl >]($($arg),*));
@@ -274,7 +274,7 @@ macro_rules! py_function_sync_async {
         ::paste::paste! {
         $(#[$meta])+
         #[pyo3(name = $name "_async")]
-        #[allow(clippy::too_many_arguments, clippy::missing_docs)]
+        #[allow(clippy::too_many_arguments)]
         $pub fn [< py_ $name _async >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*)
             -> ::pyo3::PyResult<$crate::sync::Awaitable<'_, $ret>>
         {

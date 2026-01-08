@@ -136,10 +136,13 @@ impl<T: ArbitraryOrd> ArbitraryOrd for Option<T> {
 
 impl<T: ArbitraryOrd> ArbitraryOrd for (T, T) {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.0.cmp(&other.0) {
-            Ordering::Equal => self.1.cmp(&other.1),
-            not_equal => not_equal,
-        }
+        self.0.cmp(&other.0).then_with(|| self.1.cmp(&other.1))
+    }
+}
+
+impl<T: ArbitraryOrd> ArbitraryOrd for &T {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (*self).cmp(*other)
     }
 }
 
@@ -147,7 +150,7 @@ impl<T: ArbitraryOrd> ArbitraryOrd for Vec<T> {
     fn cmp<'a>(&'a self, other: &'a Self) -> Ordering {
         let sort = |vec: &'a Self| -> Vec<_> {
             vec.iter()
-                .sorted_by(|l, r| l.cmp(r))
+                .sorted_by(ArbitraryOrd::cmp)
                 .map(Arbitrary)
                 .collect()
         };
