@@ -5,7 +5,7 @@
 #[macro_export]
 macro_rules! create_exception {
     ( $module:expr, $py_err: ident, $base: ty ) => {
-        create_exception!($module, $py_err, $base, "");
+        $crate::create_exception!($module, $py_err, $base, "");
     };
     ( $module:expr, $py_err: ident, $base: ty, $doc: expr ) => {
         $crate::pyo3::create_exception!($module, $py_err, $base, $doc);
@@ -18,7 +18,7 @@ macro_rules! create_exception {
 #[macro_export]
 macro_rules! create_exception {
     ( $module:expr, $py_err: ident, $base: ty ) => {
-        create_exception!($module, $py_err, $base, "");
+        $crate::create_exception!($module, $py_err, $base, "");
     };
     ( $module:expr, $py_err: ident, $base: ty, $doc: expr ) => {
         $crate::pyo3::create_exception!($module, $py_err, $base, $doc);
