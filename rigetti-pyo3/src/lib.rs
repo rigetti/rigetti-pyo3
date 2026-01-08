@@ -81,10 +81,7 @@ pub use pyo3_stub_gen;
 #[cfg(feature = "async-tokio")]
 pub use tokio;
 
-use pyo3::{
-    prelude::*,
-    types::{PyList, PyTuple, PyType, PyTypeMethods},
-};
+use pyo3::{prelude::*, types::PyType};
 
 /// Create a crate-private function `init_submodule` to set up this submodule and call the same
 /// function on child modules (which should also use this macro).
@@ -239,47 +236,55 @@ macro_rules! create_init_submodule {
 /// - Python's `inspect`: <https://docs.python.org/3/library/inspect.html#inspect.getmembers>
 pub fn fix_enum_qual_names(typ: &Bound<'_, PyType>) -> PyResult<()> {
     let py = typ.py();
-    let (is_class, get_members) = import_inspect(py)?;
-    fix_enum_qual_names_impl(py, typ, &is_class, &get_members)
+    let (is_class, get_members) = __private::import_inspect(py)?;
+    __private::fix_enum_qual_names_impl(py, typ, &is_class, &get_members)
 }
 
-/// Internal function to import necessary functions from the Python `inspect` module
-/// for use by the [`fix_enum_qual_names_impl`] function.
-fn import_inspect(py: Python<'_>) -> PyResult<(Bound<'_, PyAny>, Bound<'_, PyAny>)> {
-    let inspect = PyModule::import(py, pyo3::intern!(py, "inspect"))?;
-    let is_class = inspect.getattr(pyo3::intern!(py, "isclass"))?;
-    let get_members = inspect.getattr(pyo3::intern!(py, "getmembers"))?;
-    Ok((is_class, get_members))
-}
+#[doc(hidden)]
+pub mod __private {
+    use pyo3::{
+        prelude::*,
+        types::{PyList, PyTuple, PyType, PyTypeMethods},
+    };
 
-/// Internal implementation of [`fix_enum_qual_names`].
-///
-/// This amortizes the cost of the Python module import machinery
-/// during the module initialization when there are many `fix_enum_qual_names` calls.
-fn fix_enum_qual_names_impl<'py>(
-    py: Python<'py>,
-    typ: &Bound<'py, PyType>,
-    is_class: &Bound<'py, PyAny>,
-    get_members: &Bound<'py, PyAny>,
-) -> PyResult<()> {
-    // The additional bindings here are necessary to avoid dropping temporaries.
-    let prefix = typ.qualname()?;
-    let prefix = prefix.to_str()?;
-
-    let inner = get_members.call((typ, is_class), None)?;
-    for item in inner.cast::<PyList>()? {
-        let item = item.cast::<PyTuple>()?;
-
-        let cls = item.get_borrowed_item(1)?;
-        if cls.cast()?.is_subclass(typ)? {
-            // See https://pyo3.rs/v0.25.1/types#borroweda-py-t for info on `get_borrowed_item`.
-            let name = item.get_borrowed_item(0)?;
-            let fixed_name = format!("{prefix}.{}", name.cast()?.to_str()?);
-            cls.setattr(pyo3::intern!(py, "__qualname__"), fixed_name)?;
-        }
+    /// Internal function to import necessary functions from the Python `inspect` module
+    /// for use by the [`fix_enum_qual_names_impl`] function.
+    pub fn import_inspect(py: Python<'_>) -> PyResult<(Bound<'_, PyAny>, Bound<'_, PyAny>)> {
+        let inspect = PyModule::import(py, pyo3::intern!(py, "inspect"))?;
+        let is_class = inspect.getattr(pyo3::intern!(py, "isclass"))?;
+        let get_members = inspect.getattr(pyo3::intern!(py, "getmembers"))?;
+        Ok((is_class, get_members))
     }
 
-    Ok(())
+    /// Internal implementation of [`crate::fix_enum_qual_names`].
+    ///
+    /// This amortizes the cost of the Python module import machinery
+    /// during the module initialization when there are many `fix_enum_qual_names` calls.
+    pub fn fix_enum_qual_names_impl<'py>(
+        py: Python<'py>,
+        typ: &Bound<'py, PyType>,
+        is_class: &Bound<'py, PyAny>,
+        get_members: &Bound<'py, PyAny>,
+    ) -> PyResult<()> {
+        // The additional bindings here are necessary to avoid dropping temporaries.
+        let prefix = typ.qualname()?;
+        let prefix = prefix.to_str()?;
+
+        let inner = get_members.call((typ, is_class), None)?;
+        for item in inner.cast::<PyList>()? {
+            let item = item.cast::<PyTuple>()?;
+
+            let cls = item.get_borrowed_item(1)?;
+            if cls.cast()?.is_subclass(typ)? {
+                // See https://pyo3.rs/v0.25.1/types#borroweda-py-t for info on `get_borrowed_item`.
+                let name = item.get_borrowed_item(0)?;
+                let fixed_name = format!("{prefix}.{}", name.cast()?.to_str()?);
+                cls.setattr(pyo3::intern!(py, "__qualname__"), fixed_name)?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Fix the `__qualname__` on a list of complex enums so that they can be pickled.
@@ -307,58 +312,65 @@ fn fix_enum_qual_names_impl<'py>(
 /// but this macro and [`fix_enum_qual_names`] can be used without these, if desired.
 ///
 /// ```
-/// use pyo3::prelude::*;
+/// # fn main() { mod mainmod {
+/// use pyo3::{prelude::*, types::PyTuple};
 /// use rigetti_pyo3::{create_init_submodule, fix_complex_enums, fix_enum_qual_names};
 ///
 /// // Stubs aren't required, but they're compatible with this macro (and nice to have).
 /// #[cfg(feature = "stubs")]
-/// use pyo3_stub_gen::derive::gen_stub_pyclass_complex_enum;
+/// use pyo3_stub_gen::derive::{gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 ///
-/// #[pymodule(name = "mainmod")]
-/// fn main_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
-///     // You can use the function or macro directly,
-///     // but be sure to add your classes before calling it.
-///     let py = m.py();
-///
-///     m.add_class::<Foo>()?;
-///     m.add_class::<Bar>()?;
-///     m.add_wrapped(wrap_pymodule!(submod::init_submodule));
-///
-///     // These are functionally equivalent, except for the class name;
-///     // the macro accepts an arbitrary number of classes.
-///     fix_enum_qual_names(&py.get_type::<Foo>())?;
-///     fix_complex_enums!(py, Bar);
-/// }
-///
+/// // The easiest way to apply this fix is to simply use the `create_init_submodule` macro
+/// // and specify the classes in the `complex_enums` list:
 /// mod submod {
-///     use pyo3::prelude::*;
 ///     use rigetti_pyo3::create_init_submodule;
+///     use super::{Foo, Bar};
 ///
 ///     create_init_submodule! {
 ///         complex_enums: [Foo, Bar],
 ///     }
 /// }
 ///
-/// #[pyo3::pymodule(name = "submod", module = "mainmod", submodule)]
-/// fn init_some_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+/// // If you are setting up the module manually, you can use the function or macro directly...
+/// #[pymodule(name = "mainmod")]
+/// fn main_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+///     let py = m.py();
+///
+///     // ...but be sure to add your classes to the module before calling either.
+///     m.add_class::<Foo>()?;
+///     m.add_class::<Bar>()?;
+///     submod::init_submodule("submod", py, m)?;
+///
+///     // You can apply the enum `__qualname__` fix via the macro or the function;
+///     // they are functionally equivalent, but the first has a slight performance optimization
+///     // by bundling together some interactions with the Python interpreter.
+///
+///     // Method one (preferred): use the macro and specify a list of complex enum types:
+///     fix_complex_enums!(py, Foo, Bar);
+///
+///     // Method two: manually call `fix_enum_qual_names` for each class:
+///     // fix_enum_qual_names(&py.get_type::<Foo>())?;
+///     // fix_enum_qual_names(&py.get_type::<Bar>())?;
+///
+///     Ok(())
 /// }
 ///
 /// #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-/// #[pyo3::pyclass(module = "some.place", eq, frozen, hash, get_all)]
+/// #[pyo3::pyclass(module = "mainmod.submod")]
 /// pub enum Foo {
 ///     Integer(i64),
 ///     Real(f64),
 /// }
 ///
 /// #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-/// #[pyo3::pyclass(module = "some.place", eq, frozen, hash, get_all)]
+/// #[pyo3::pyclass(module = "mainmod.submod")]
 /// pub enum Bar {
 ///     Integer(i64),
 ///     Real(f64),
 /// }
 ///
 /// // Note that in order to support pickling in general,
-/// // you should implement `__getnewargs__` or another method used by the `pickle` module.
+/// // you'll still need `__getnewargs__` or another method used by the `pickle` module.
 /// #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 /// #[pymethods]
 /// impl Foo {
@@ -380,21 +392,24 @@ fn fix_enum_qual_names_impl<'py>(
 ///         }
 ///     }
 /// }
+/// # } }
 /// ```
 #[macro_export]
 macro_rules! fix_complex_enums {
     ($py:expr, $($name:path),* $(,)?) => {
         {
             let py = $py;
-            let (is_class, get_members) = $crate::import_inspect(py)?;
-            $($crate::fix_enum_qual_names_impl(py, &py.get_type::<$name>(), &is_class, &get_members)?;)*
-            // $($crate::fix_enum_qual_names(&py.get_type::<$name>())?;)*
+            // Importing once before applying the fix reduces the work done by the interpreter.
+            let (is_class, get_members) = $crate::__private::import_inspect(py)?;
+            $($crate::__private::fix_enum_qual_names_impl(py, &py.get_type::<$name>(), &is_class, &get_members)?;)*
         }
     };
 }
 
+/// This is essentially the example above, but with an additional test of the pickle round-trip,
+/// and a check that NOT applying the fix causes pickling to fail, despite having `__getnewargs__`.
 #[cfg(test)]
-mod test {
+mod test_fix_qualname {
     use pyo3::types::{PyDict, PyTuple};
     use pyo3::{prelude::*, py_run};
 
@@ -461,6 +476,8 @@ mod test {
         Ok(())
     }
 
+    /// Verify that we can pickle and unpickle complex enums,
+    /// provided they've had their `__qualname__` fixed.
     #[test]
     fn test_fix_enum_qual_names() {
         pyo3::append_to_inittab!(mymod);
