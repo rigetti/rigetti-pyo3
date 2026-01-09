@@ -24,16 +24,15 @@
 use std::{
     any::TypeId,
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashSet},
-    path::PathBuf,
+    collections::{BTreeMap, HashSet},
 };
 
 use indexmap::IndexMap;
 use itertools::Itertools as _;
 use pyo3_stub_gen::{
     generate::{
-        ClassDef, EnumDef, FunctionDef, MemberDef, MethodDef, MethodType, Module, Parameter,
-        ParameterDefault, Parameters, VariableDef,
+        ClassDef, EnumDef, MemberDef, MethodDef, MethodType, Module, Parameter, ParameterDefault,
+        Parameters,
     },
     type_info::{DeprecatedInfo, IgnoreTarget, ParameterKind},
     StubInfo, TypeInfo,
@@ -45,14 +44,12 @@ use pyo3_stub_gen::{
 pub fn sort(stub: &mut StubInfo) {
     let StubInfo {
         modules,
-        python_root,
+        // The Python root is fixed and doesn't need any adjustment.
+        python_root: _,
     } = stub;
 
-    // The Python root is fixed and doesn't need any adjustment.
-    let _: &PathBuf = python_root;
-
-    // The `modules` are sorted because they're in a `BTreeMap`, but we need to sort their
-    // contents.
+    // The `modules` are sorted because they're in a `BTreeMap`,
+    // but we need to sort their contents.
     <BTreeMap<String, Module>>::values_mut(modules).for_each(sort_module);
 }
 
@@ -250,19 +247,16 @@ arbitrary_ord_structs! {
 /// Sort elements of a class definition.
 fn sort_class(class: &mut ClassDef) {
     let ClassDef {
-        name,
-        doc,
+        name: _, // These strings don't need adjustment.
+        doc: _,
         attrs: _, // Regardless of the type of the field, we can't reorder attributes
-        getter_setters,
-        methods,  // A map from names to overload sets; overloads can't be reordered
         bases: _, // Regardless of the type of the field, we can't reorder base classes
         classes,
         match_args: _, // Regardless of the type of the field, we can't reorder match args
         subclass: _,
+        methods, // A map from names to overload sets; overloads can't be reordered
+        getter_setters,
     } = class;
-
-    let _: &str = name;
-    let _: &str = doc;
 
     // [`MemberDef`]s are atomic and don't have contents that need to be sorted.
     <IndexMap<String, (Option<MemberDef>, Option<MemberDef>)>>::sort_by_key(
@@ -270,13 +264,13 @@ fn sort_class(class: &mut ClassDef) {
         |k, _| k.clone(),
     );
 
-    // [`MethodDef`]s are atomic and don't have contents that need to be sorted.  We
-    // have to `clone` in the sorting function because [`IndexMap::sort_by_key`]'s
-    // lifetimes are too restrictive.
+    // [`MethodDef`]s are atomic and don't have contents that need to be sorted.
+    // We have to `clone` in the sorting function
+    // because [`IndexMap::sort_by_key`]'s lifetimes are too restrictive.
     <IndexMap<String, Vec<MethodDef>>>::sort_by_key(methods, |k, _| k.clone());
 
-    // Finally, [`ClassDef`]s both need to be sorted internally and need to be produced in
-    // sorted order.
+    // Finally, [`ClassDef`]s both need to be sorted internally
+    // and need to be produced in sorted order.
     <[ClassDef]>::iter_mut(classes).for_each(sort_class);
     <[ClassDef]>::sort_by(classes, ArbitraryOrd::cmp);
 }
@@ -284,8 +278,8 @@ fn sort_class(class: &mut ClassDef) {
 /// Sort elements of an enum definition.
 fn sort_enum(r#enum: &mut EnumDef) {
     let EnumDef {
-        name,
-        doc,
+        name: _, // These strings don't need adjustment.
+        doc: _,
         variants: _, // Regardless of the type of the field, we can't reorder the variants
         methods,
         attrs: _, // Regardless of the type of the field, we can't reorder the variants attributes
@@ -293,12 +287,7 @@ fn sort_enum(r#enum: &mut EnumDef) {
         setters,
     } = r#enum;
 
-    // Names (being strings) don't any adjustment.
-    let _: &str = name;
-    let _: &str = doc;
-
-    // [`MethodDef`]s and [`MemberDef`]s are atomic and don't have contents that need to be
-    // sorted.
+    // [`MethodDef`]s and [`MemberDef`]s are atomic and don't have contents that need to be sorted.
     <[MethodDef]>::sort_by(methods, ArbitraryOrd::cmp);
     <[MemberDef]>::sort_by(getters, ArbitraryOrd::cmp);
     <[MemberDef]>::sort_by(setters, ArbitraryOrd::cmp);
@@ -307,34 +296,21 @@ fn sort_enum(r#enum: &mut EnumDef) {
 /// Sort elements of a module definition.
 fn sort_module(module: &mut Module) {
     let Module {
-        doc,
+        name: _, // Strings need no adjustment.
+        doc: _,
+        default_module_name: _,
         class,
         enum_,
-        function,
-        variables,
-        name,
-        default_module_name,
-        submodules,
+        // `function` is an ordered map from function names to overload sets;
+        // since overload sets themselves can't be reordered, there's nothing else to do.
+        function: _,
+        // [`VariableDef`]s are atomic;
+        // they don't themselves have internal structure that needs to be reordered.
+        variables: _,
+        // The submodules are stored as an ordered set of names,
+        // so we don't need to do any more sorting.
+        submodules: _,
     } = module;
-
-    // Doc strings don't any adjustment.
-    let _: &str = doc;
-
-    // `function` is an ordered map from function names to overload sets; since overload sets
-    // themselves can't be reordered, there's nothing else to do.
-    let _: &BTreeMap<&str, Vec<FunctionDef>> = function;
-
-    // [`VariableDef`]s are atomic; they don't themselves have internal structure that needs to
-    // be reordered.
-    let _: &BTreeMap<&str, VariableDef> = variables;
-
-    // Names (being strings) don't need any adjustment.
-    let _: &String = name;
-    let _: &String = default_module_name;
-
-    // The submodules are stored as an ordered set of names, so we don't need to do any more
-    // sorting.
-    let _: &BTreeSet<String> = submodules;
 
     // The [`class`]es and [`enum_`]s are sorted because they're kept in [`BTreeMap`]s, but we
     // need to sort the individual [`ClassDef`]s and [`EnumDef`]s internally.  You might be,
