@@ -22,7 +22,6 @@
 //! ```
 
 use std::{
-    any::TypeId,
     cmp::Ordering,
     collections::{BTreeMap, HashSet},
 };
@@ -244,35 +243,33 @@ arbitrary_ord_structs! {
 // anything or there are any changes, we aggressively over-annotate all the types.  This allows
 // seeing immediately where sorting bottoms out.
 
+/// A key function usable to sort `IndexMap<String, T>` by key without `clone`ing the `String`s.
+fn cmp_strings<T>(k1: &String, _: &T, k2: &String, _: &T) -> Ordering {
+    k1.cmp(k2)
+}
+
 /// Sort elements of a class definition.
 fn sort_class(class: &mut ClassDef) {
     let ClassDef {
         name: _, // These strings don't need adjustment.
         doc: _,
-        attrs: _, // Regardless of the type of the field, we can't reorder attributes
-        bases: _, // Regardless of the type of the field, we can't reorder base classes
+        attrs: _, // Regardless of the type of the field, we can't reorder attributes.
+        bases: _, // Regardless of the type of the field, we can't reorder base classes.
         classes,
-        match_args: _, // Regardless of the type of the field, we can't reorder match args
+        match_args: _, // Regardless of the type of the field, we can't reorder match args.
         subclass: _,
         methods, // A map from names to overload sets; overloads can't be reordered
         getter_setters,
     } = class;
 
     // [`MemberDef`]s are atomic and don't have contents that need to be sorted.
-    <IndexMap<String, (Option<MemberDef>, Option<MemberDef>)>>::sort_by_key(
-        getter_setters,
-        |k, _| k.clone(),
-    );
-
-    // [`MethodDef`]s are atomic and don't have contents that need to be sorted.
-    // We have to `clone` in the sorting function
-    // because [`IndexMap::sort_by_key`]'s lifetimes are too restrictive.
-    <IndexMap<String, Vec<MethodDef>>>::sort_by_key(methods, |k, _| k.clone());
+    methods.sort_by(cmp_strings);
+    getter_setters.sort_by(cmp_strings);
 
     // Finally, [`ClassDef`]s both need to be sorted internally
     // and need to be produced in sorted order.
-    <[ClassDef]>::iter_mut(classes).for_each(sort_class);
-    <[ClassDef]>::sort_by(classes, ArbitraryOrd::cmp);
+    classes.iter_mut().for_each(sort_class);
+    classes.sort_by(ArbitraryOrd::cmp);
 }
 
 /// Sort elements of an enum definition.
@@ -280,17 +277,17 @@ fn sort_enum(r#enum: &mut EnumDef) {
     let EnumDef {
         name: _, // These strings don't need adjustment.
         doc: _,
-        variants: _, // Regardless of the type of the field, we can't reorder the variants
+        variants: _, // Regardless of the type of the field, we can't reorder the variants.
         methods,
-        attrs: _, // Regardless of the type of the field, we can't reorder the variants attributes
+        attrs: _, // Regardless of the type of the field, we can't reorder the variants attributes.
         getters,
         setters,
     } = r#enum;
 
     // [`MethodDef`]s and [`MemberDef`]s are atomic and don't have contents that need to be sorted.
-    <[MethodDef]>::sort_by(methods, ArbitraryOrd::cmp);
-    <[MemberDef]>::sort_by(getters, ArbitraryOrd::cmp);
-    <[MemberDef]>::sort_by(setters, ArbitraryOrd::cmp);
+    methods.sort_by(ArbitraryOrd::cmp);
+    getters.sort_by(ArbitraryOrd::cmp);
+    setters.sort_by(ArbitraryOrd::cmp);
 }
 
 /// Sort elements of a module definition.
@@ -317,6 +314,8 @@ fn sort_module(module: &mut Module) {
     // rightly, concerned about the fact that the ordering on [`TypeId`]s is arbitrary; however,
     // [`pyo3_stub_gen`] sorts the [`ClassDef`]s and [`EnumDef`]s by their names before writing
     // them out.
-    <BTreeMap<TypeId, ClassDef>>::values_mut(class).for_each(sort_class);
-    <BTreeMap<TypeId, EnumDef>>::values_mut(enum_).for_each(sort_enum);
+    // <BTreeMap<TypeId, ClassDef>>::
+    // <BTreeMap<TypeId, EnumDef>>::values_mut(enum_)
+    class.values_mut().for_each(sort_class);
+    enum_.values_mut().for_each(sort_enum);
 }
