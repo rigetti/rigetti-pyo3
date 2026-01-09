@@ -29,10 +29,12 @@ async-tokio = [
 pyo3 = { version = "0.27.2", default-features = false, features = ["macros", "multiple-pymethods"] }
 
 # Enabled with the `opentelemetry` feature.
-opentelemetry = { version = "0.31.0", optional = true}
+opentelemetry = { version = "0.31.0", optional = true }
 
 # Enabled with the `stubs` feature.
 indexmap = { version = "2.2.6", optional = true }
+# The weird version range is because `pyo3-stub-gen`'s transitive dependencies
+# pull in version `itertools` 0.11 and 0.14, any of which are fine for us.
 itertools = { version = ">=0.11.0,<0.15", optional = true }
 optipy = { workspace = true, optional = true }
 pyo3-stub-gen = { version = "0.17.2", optional = true }
