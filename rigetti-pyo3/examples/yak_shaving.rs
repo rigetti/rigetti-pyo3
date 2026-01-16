@@ -1,3 +1,12 @@
+#![cfg_attr(
+    feature = "stubs",
+    expect(
+        clippy::incompatible_msrv,
+        reason = "false positive when function pointers are used but not called in const contexts; \
+                  see rust-lang/rust-clippy#15792"
+    )
+)]
+
 use pyo3::{prelude::*, pymodule, types::PyModule, PyResult, Python};
 
 #[cfg(feature = "stubs")]
