@@ -13,7 +13,7 @@ db-urls = [ "https://github.com/rustsec/advisory-db",]
 ignore = [
   # `pyo3-stub-gen` uses `rustpython-parser` which uses `rust-unic` crates, which are now unmaintained.
   # Hopefully `pyo3-stub-gen` will switch to `ruff_python_parser`: https://github.com/Jij-Inc/pyo3-stub-gen/issues/359
-  # We'll ignore it for now, since `pyo3-stub-gen` is effectively a build-time dependency anyway. 
+  # We'll ignore it for now, since `pyo3-stub-gen` is effectively a build-time dependency anyway.
   { id = "RUSTSEC-2025-0075", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0080", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0081", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
