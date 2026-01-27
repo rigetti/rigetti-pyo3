@@ -1,12 +1,12 @@
-"""
-These types are used for tracking the package/modules/items annotated and exported by Rust code.
-"""
+"""These types are used for tracking the package/modules/items annotated and exported by Rust code."""
 
+import enum
+import logging
+import re
 from collections import defaultdict
 from collections.abc import ItemsView, KeysView, MutableMapping, MutableSet, ValuesView
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing_extensions import Self
 from typing import (
     Iterable,
     Iterator,
@@ -14,9 +14,8 @@ from typing import (
     TypeVar,
     overload,
 )
-import enum
-import logging
-import re
+
+from typing_extensions import Self
 
 from .reader import Line
 
@@ -39,6 +38,12 @@ class PackageConfig:
 
 
 class PackageKind(enum.Enum):
+    """Whether a package represents details gathered from annotations or exports.
+
+    An ``Annotation`` package contains information gathered from the Rust items' annotations.
+    An ``Export`` package contains information inferred about the exported package layout.
+    """
+
     Annotation = "Annotation"
     Export = "Export"
 
@@ -54,7 +59,10 @@ class Kind(enum.Enum):
     Error = "error"
 
     def is_py_like(self, py: Self, /) -> bool:
-        """Return ``True`` if the Python-argument is "like" this one; that is,::
+        """Return ``True`` if the Python-argument is "like" this one.
+
+        That is::
+
         - they have the same kind, or
         - this is a struct or enum and the argument is a class or error.
 
@@ -79,6 +87,7 @@ class StubKind(enum.Enum):
     ComplexEnumeration = "class_complex_enum"
 
     def is_like(self, kind: Kind) -> bool:
+        """Return `True` if the stub kind is "like" the given kind."""
         match (kind, self):
             case (Kind.Struct, StubKind.Class):
                 return True
@@ -108,7 +117,6 @@ class StubAttr:
     @classmethod
     def from_match(cls, stubgen_match: re.Match) -> Self:
         """Process #[gen_stub_...] annotations."""
-
         stub_kind = stubgen_match.group(1) or stubgen_match.group(3)
         if stub_kind is None:
             raise ValueError("Unable to determine stub kind")
@@ -137,6 +145,7 @@ class PyO3Props(dict[str, str | bool]):
     """
 
     def gets(self, key: str, default: str | None = None) -> str:
+        """Return a string-property's value, or raise if the key exists but isn't a string."""
         if not (default is None or isinstance(default, str)):
             raise TypeError("if given, default must be str")
         if (value := super().get(key, default)) is not None and isinstance(value, str):
@@ -146,6 +155,7 @@ class PyO3Props(dict[str, str | bool]):
         raise KeyError(key)
 
     def is_(self, key: str, default: bool = False) -> bool:
+        """Return a boolean-property's value, or raise if the key exists but isn't a bool."""
         if not (default is None or isinstance(default, bool)):
             raise TypeError("if given, default must be bool")
         if (value := super().get(key, default)) is not None and isinstance(value, bool):
@@ -157,11 +167,11 @@ class PyO3Props(dict[str, str | bool]):
     @classmethod
     def parse(cls, prop_str: str) -> Self:
         """Convert props used in a ``#[whatever(arg1, arg2 = "val")]`` annotation.
+
         Note that the `prop_str` should just be the part between the parentheses.
 
         For the above example, the return value is ``{"arg1": True, "arg2": "val"}``.
         """
-
         result = cls()
         parts = [p.strip() for p in prop_str.split(",")]
         for part in parts:
@@ -183,6 +193,7 @@ class PyO3Props(dict[str, str | bool]):
         )
 
     def __sub__(self, keys: set[str]) -> Self:
+        """Remove the given keys, if present."""
         cls = self.__class__
         return cls((k, v) for k, v in self.items() if k not in keys)
 
@@ -201,12 +212,14 @@ class Item:
     attrs: list[Line] = field(compare=False, hash=False, default_factory=list)
 
     def __str__(self) -> str:
+        """Return a string representation of this item, useful for logging an error reporting."""
         name = self.rust_name
         if self.rust_name != self.python_name:
             name = f"{name} (py: {self.python_name})"
         return f"{self.kind.value} '{name}' in {self.path}@{self.line.num}"
 
     def has_stub(self) -> bool:
+        """Return whether this item has a stub attribute."""
         return self.stub_attr is not None
 
 
@@ -222,21 +235,27 @@ class Module(MutableSet[Item]):
     _fixed_enums: set[str] = field(default_factory=set)
 
     def __contains__(self, key: object) -> bool:
+        """Return `True` if the given `key` is in this `Module`."""
         return key in self._items
 
     def __iter__(self) -> Iterator[Item]:
+        """Yield the `Item`s in this `Module`."""
         return self._items.__iter__()
 
     def __len__(self) -> int:
+        """Return the number of `Item`s in this `Module`."""
         return self._items.__len__()
 
     def update(self, items: Iterable[Item]) -> None:
+        """Add the given `items` to this `Module`."""
         return self._items.update(items)
 
     def discard(self, value: Item) -> None:
+        """Remove the given item from this `Module`, if present."""
         return self._items.discard(value)
 
     def add(self, item: Item) -> None:
+        """Add the given item to this `Module`."""
         logger.info(f"Adding {item}")
         self._items.add(item)
 
@@ -284,9 +303,10 @@ class Package(MutableMapping[str, Module]):
     _methods: Module = field(default_factory=Module)
 
     def find_rust(self, item: Item | str) -> tuple[str, Item] | None:
-        """Return the name of a `Module` and an `Item` within it
-        that has the same Rust name as the given `item`,
-        but is distinct from the given `item.`
+        """Find a distinct `Item` that has the same Rust name as the given `item`.
+
+        That is, this returns the name of a `Module` and an `Item` within it
+        that has the same Rust name as the given `item`, but is not "==" to the given `item`.
 
         If the given `item` is a `str` instead of an actual `Item`,
         the search is instead for an `Item` with that Rust name,
@@ -308,6 +328,7 @@ class Package(MutableMapping[str, Module]):
         )
 
     def __getitem__(self, name: str, /) -> Module:
+        """Return the `Module` with the given `name`."""
         if name not in self._modules:
             logger.info(f"Creating module '{name}'.")
         return self._modules[name]
@@ -320,31 +341,40 @@ class Package(MutableMapping[str, Module]):
     def get(self, key: str, default: _T, /) -> Module | _T: ...
 
     def get(self, name: str, default: _T | None = None, /) -> Module | _T | None:
+        """Return the `Module` with the given `name`, or `default` if not found."""
         return self._modules.get(name, default)
 
     def __setitem__(self, name: str, module: Module, /) -> None:
+        """Associate the given `name` with a `Module`, adding it to this `Package`."""
         logger.info(f"Setting module '{name}'.")
         self._modules[name] = module
 
     def __delitem__(self, name: str, /) -> None:
+        """Remove the `Module` with the given `name` from this `Package`."""
         del self._modules[name]
 
     def __contains__(self, name: object) -> bool:
+        """Return `True` if the `Package` has a `Module` with the given `name`."""
         if not isinstance(name, str):
             raise TypeError(f"Package keys must be strings, not {type(name)}")
         return name in self._modules
 
     def __iter__(self) -> Iterator[str]:
+        """Iterate over the `Module` names in this `Package`."""
         return self._modules.__iter__()
 
     def __len__(self) -> int:
+        """Return the number of `Module`s in this `Package`."""
         return self._modules.__len__()
 
     def keys(self) -> KeysView[str]:
+        """Return a view of the `Module` names in this `Package`."""
         return self._modules.keys()
 
     def values(self) -> ValuesView[Module]:
+        """Return a view of the `Module` names in this `Package`."""
         return self._modules.values()
 
     def items(self) -> ItemsView[str, Module]:
+        """Return a view of the names and `Module`s in this `Package`."""
         return self._modules.items()

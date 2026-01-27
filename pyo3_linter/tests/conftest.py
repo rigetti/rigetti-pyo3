@@ -3,15 +3,15 @@ from pathlib import Path
 import pytest
 
 from pyo3_linter import (
-    macro_handler,
-    MacroContext,
     Item,
     Kind,
-    join_lines,
-    iter_delim,
-    default_macro_handlers,
-    PackageConfig,
+    MacroContext,
     MacroHandlers,
+    PackageConfig,
+    default_macro_handlers,
+    iter_delim,
+    join_lines,
+    macro_handler,
 )
 
 

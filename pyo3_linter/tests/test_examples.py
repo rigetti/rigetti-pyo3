@@ -1,15 +1,15 @@
 import json
-from pathlib import Path
 from collections.abc import Iterable
+from pathlib import Path
 
 from pyo3_linter import (
-    process_dir,
-    find_possible_mistakes,
     Issue,
-    Package,
-    PackageKind,
-    PackageConfig,
     MacroHandlers,
+    Package,
+    PackageConfig,
+    PackageKind,
+    find_possible_mistakes,
+    process_dir,
 )
 
 

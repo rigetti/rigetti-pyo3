@@ -1,15 +1,14 @@
-"""
-These types and functions are used to read over lines of Rust source code.
-"""
+"""These types and functions are used to read over lines of Rust source code."""
 
+import logging
+import re
 from collections import deque
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 from typing import Iterator, TypeAlias
+
 from typing_extensions import Self
-import logging
-import re
 
 logger = logging.getLogger(__name__)
 
@@ -22,20 +21,33 @@ class Line:
     text: str
 
     def __contains__(self, s: str) -> bool:
+        """Return `True` if the `Line`'s text contains the given string."""
         return s in self.text
 
     def __iter__(self) -> Iterator:
+        """Yield the `Line`s number, then text.
+
+        This allows you to destructure the `Line` as you would a `tuple[int, str]`::
+
+            line = Line(1, "Hello, world!")
+            num, text = line
+            assert num == 1
+            assert text == "Hello, world!"
+        """
         yield self.num
         yield self.text
 
     def is_blank(self) -> bool:
+        """Return `True` if the line's text consist only of whitespace."""
         return self.text.strip() == ""
 
     def splitat(self, index: int) -> tuple[Self, Self]:
+        """Split this `Line` into two `Line`s at the given index."""
         cls = self.__class__
         return cls(self.num, self.text[:index]), cls(self.num, self.text[index:])
 
     def partition(self, sep: str) -> tuple[Self, Self]:
+        """Split this `Line` into two `Line`s at the first occurrence of `sep`."""
         if (index := self.text.find(sep)) >= 0:
             return self.splitat(index)
         return self.splitat(len(self.text))
@@ -100,7 +112,6 @@ def skip(
 
 def join_lines(lines: Lines, /, first: Line | None = None, sep: str = " ") -> Line:
     """Collect lines into a single line, separated with a delimiter."""
-
     first = next(lines, first)
     if first is None:
         raise ValueError("no lines to iterate")
@@ -127,7 +138,6 @@ MARKERS = re.compile(r"(?P<cblock>/\*)|(?P<cline>(?:^|[^:])//)|(?P<macrodef>macr
 
 def read_content(lines: Lines) -> Lines:
     """Iterate over lines, skipping empty lines, comments, and `macro_rules!` definitions."""
-
     while line := next(lines, None):
         while m := MARKERS.search(line.text):
             if m.lastgroup == "cblock":
@@ -153,6 +163,7 @@ def read_content(lines: Lines) -> Lines:
 
 
 def read_file(path: Path) -> Lines:
+    """Read lines from a file."""
     logger.info(f"Processing {path}")
     with path.open(encoding="utf-8") as f:
         yield from read_content(
