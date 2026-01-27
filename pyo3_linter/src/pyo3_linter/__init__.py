@@ -1,5 +1,4 @@
-"""
-A lint helper for PyO3 wrappers.
+"""A lint helper for PyO3 wrappers.
 
 You'd typically use this by giving the root source path to the `process_dir` function,
 then pass the resulting `Package`s to the `find_possible_mistakes` function,
@@ -19,23 +18,18 @@ With ``pyo3_stub_gen`` annotations, the script can usually make a better guess a
 but without one, it just prints all the functions it finds with a guess about the export.
 """
 
+import logging
+import re
 from dataclasses import dataclass, replace
 from itertools import accumulate, chain
 from pathlib import Path
 from typing import TYPE_CHECKING
-import logging
-import re
 
-from .reader import (
-    join_lines,
-    iter_delim,
-    read_file,
-    Line,
-    Lines,
-    resplit,
-    skip,
+from .macros import (
+    MacroContext,
+    MacroHandlers,
+    macro_handler,
 )
-
 from .package import (
     Item,
     Kind,
@@ -49,19 +43,23 @@ from .package import (
     SubmoduleInfo,
     SubmoduleRegistry,
 )
-
-from .macros import (
-    MacroContext,
-    MacroHandlers,
-    macro_handler,
+from .reader import (
+    Line,
+    Lines,
+    iter_delim,
+    join_lines,
+    read_file,
+    resplit,
+    skip,
 )
-
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class Issue:
+    """An issue found by the linter."""
+
     package_kind: PackageKind
     message: str
 
@@ -81,15 +79,14 @@ def process_dir(
     config: PackageConfig,
     macro_handlers: MacroHandlers,
 ) -> tuple[Package, Package]:
-    """Process sources recursively from the root path,
-    returning the ``(annotated, exported)`` `Package`s.
+    """Process sources recursively from the root, returning ``(annotated, exported)`` `Package`s.
 
     Args:
         root: The root directory to scan for .rs files.
         config: Configuration for module naming.
         macro_handlers: List of macro handlers for custom macro parsing.
-    """
 
+    """
     submodule_registry: SubmoduleRegistry = {}
 
     annotated, exported = Package(), Package()
@@ -181,7 +178,6 @@ def guess_function_modules(annotated: Package, exported: Package):
     we can only guess the module it belongs to if we can find a matching export
     (that is, a ``pymodule`` it appears to have been added to).
     """
-
     builtins = annotated.get("builtins")
     if builtins is None:
         return
@@ -213,8 +209,8 @@ def find_possible_mistakes(
         config: Configuration for module naming.
         annotated: Package containing items with PyO3 annotations.
         exported: Package containing items added to Python modules.
-    """
 
+    """
     logger.debug("Checking that annotated items are added to the correct module.")
     issues: list[Issue] = []
 
@@ -272,7 +268,7 @@ def find_possible_mistakes(
                 (
                     f"Module '{module}' does not appear to be exported",
                     f"  Module found in: {anno.path}",
-                    f"  Items in module:",
+                    "  Items in module:",
                     items,
                 )
             )
@@ -378,6 +374,7 @@ def find_possible_mistakes(
 
 
 def print_package_info(annotated: Package) -> None:
+    """Print information gathered from Rust source annotations."""
     for module, anno in sorted(annotated.items()):
         items = sorted(anno)
         all_enums = [item for item in items if item.kind is Kind.Enumeration]
@@ -415,8 +412,9 @@ def _meta(regex: str) -> str:
 
 
 def _cfg(regex: str, cond: str = r"[^,]+") -> str:
-    r"""Create an RE to match content of a configurable attribute;
-    i.e., match either ``#[{regex}]`` or ``#[cfg_attr({cond}, {regex})]``.
+    r"""Create an RE to match content of a configurable attribute.
+
+    That is, match either ``#[{regex}]`` or ``#[cfg_attr({cond}, {regex})]``.
     """
     return _meta(
         rf"(?:cfg_attr\s*?\({cond},"
@@ -426,8 +424,8 @@ def _cfg(regex: str, cond: str = r"[^,]+") -> str:
 
 
 CONFIG_ATTR = r'(?:cfg_attr\(feature\s*?=\s*?"python",\s*?)?'
-PYITEM_RE = re.compile(_cfg(rf"(?:pyo3::)?(?:pyclass|pyfunction)\s*(?:\((.*?)\))?"))
-PYMODULE_RE = re.compile(_cfg(f"(?:pyo3::)?pymodule"))
+PYITEM_RE = re.compile(_cfg(r"(?:pyo3::)?(?:pyclass|pyfunction)\s*(?:\((.*?)\))?"))
+PYMODULE_RE = re.compile(_cfg("(?:pyo3::)?pymodule"))
 PYMETHODS_RE = re.compile(_cfg(r"(?:pyo3::)?pymethods"))
 PYO3_RE = re.compile(_cfg(r"pyo3\(([^)]+)\)"))
 GETTER_SETTER_RE = re.compile(_cfg(r"(getter|setter)\(([^)]+)\)"))
@@ -446,7 +444,6 @@ STUB_GEN_RE = re.compile(
 
 def _pymethods(annotated: Package, path: Path, lines: Lines):
     """Process the body of a ``#[pymethods]`` annotated ``impl`` block."""
-
     # Skip over additional `#[...]` lines.
     while (line := next(lines, None)) and line.text.strip().startswith("#["):
         line = join_lines(iter_delim(lines, "[]", first=line))
@@ -500,7 +497,8 @@ def _pymethods(annotated: Package, path: Path, lines: Lines):
             line=line,
             attrs=attrs,
         )
-        assert item.kind is Kind.Function, str(item)
+        if item.kind is not Kind.Function:
+            logger.error(f"Suspicious Kind (expected fn) for {path}@{line}: {kind}")
         if item.python_name.startswith("Py") or item.python_name.startswith("py_"):
             logger.warning(f"Suspicious name for {path}@{line}: {item}")
 
@@ -517,13 +515,11 @@ def _pyitem(
     pyclass_match: re.Match | None,
     last_stub: StubAttr | None = None,
 ) -> tuple[Module, Item] | tuple[None, None]:
-    """Process #[pyclass] and #[pyfunction] annotated items,
-    adding them as annotated package details.
+    """Process ``#[pyclass]`` and ``#[pyfunction]`` annotated items as annotated items.
 
     On success, this returns ``(module, item)``,
     where ``module`` is the `Module` where `Item` ``item`` is added.
     """
-
     if pyclass_match is not None:
         props = PyO3Props.parse(pyclass_match.group(1) or pyclass_match.group(2) or "")
     else:
@@ -592,7 +588,6 @@ def _pyitem(
 @macro_handler(r"\b(?:create_)?exception!")
 def _exceptions(ctx: MacroContext, module: str | None = None) -> None:
     """Process the content of the ``exception!`` and ``create_exception!`` macros."""
-
     body = join_lines(iter_delim(ctx.lines, "()"))
 
     if "create_exception!(" in body.text:
@@ -616,7 +611,6 @@ def _exceptions(ctx: MacroContext, module: str | None = None) -> None:
 @macro_handler(r"fix_complex_enums!")
 def _fix_complex_enums(ctx: MacroContext, module: str | None = None) -> None:
     """Process the input to the ``fix_complex_enums!`` macro."""
-
     line = join_lines(iter_delim(ctx.lines, "()"))
 
     if module is None:
@@ -633,8 +627,7 @@ def _fix_complex_enums(ctx: MacroContext, module: str | None = None) -> None:
 
 @macro_handler(r"py_function_sync_async!")
 def _pyfunction_sync_async(ctx: MacroContext, module: str | None = None) -> None:
-    """
-    Handle the `py_function_sync_async!` macro from rigetti-pyo3.
+    """Handle the `py_function_sync_async!` macro from rigetti-pyo3.
 
     For example, given this Rust code::
 
@@ -650,7 +643,6 @@ def _pyfunction_sync_async(ctx: MacroContext, module: str | None = None) -> None
     except we expect two functions, one named `py_get_oauth_session_sync`
     and another named `py_get_oauth_session_async`.
     """
-
     logger.info("Processing `py_function_sync_async!` macro content.")
 
     body = join_lines(iter_delim(ctx.lines, "{}"), sep="\n")
@@ -692,7 +684,6 @@ def _create_init_submodule(ctx: MacroContext, module: str | None = None) -> None
     and use an actual Rust parser to sort out the code ahead of time.
     At that point, it may be appropriate to RiiR and make use of `syn` or maybe `tree-sitter`.
     """
-
     # Build the function path from file path and mod context
     # e.g., "quilpy/mod.rs" with context [] -> "quilpy::init_submodule"
     # e.g., "validation/quilpy.rs" with context ["identifier"] -> "validation::quilpy::identifier::init_submodule"
@@ -756,7 +747,6 @@ def _create_init_submodule(ctx: MacroContext, module: str | None = None) -> None
 
 def _pymod(ctx: MacroContext, config: PackageConfig, macro_handlers: MacroHandlers):
     """Process the body of a #[pymodule] annotated function."""
-
     mod_line = -1
     props = PyO3Props()
     while (line := next(ctx.lines, None)) and line.text.strip().startswith("#["):
@@ -885,11 +875,7 @@ def extract_items_from_file(
     macro_handlers: MacroHandlers,
     config: PackageConfig,
 ):
-    """Update `annotated` and `exported` with, respectively,
-    the items that are annotated to belong to a module
-    and the items actually added to the module.
-    """
-
+    """Update `annotated` and `exported` with items discovered from the source."""
     lines = read_file(root / path)
     ctx = MacroContext(
         path=path,
@@ -908,9 +894,7 @@ def _handle_macros(
     ctx: MacroContext,
     module: str | None = None,
 ) -> bool:
-    """Check if a line contains a macro that needs handling.
-    If so, handle it and return True. Otherwise, return False.
-    """
+    """Check if a line has a matching handler, handle it, and return True."""
     for handler in macro_handlers:
         if handler.matches(line):
             logger.info(f"Discovered macro in {ctx.path}: {line}")
@@ -925,8 +909,6 @@ def _extract_items(
     macro_handlers: MacroHandlers,
     ctx: MacroContext,
 ):
-    """Internal helper that processes lines with a given mod context."""
-
     last_stub: StubAttr | None = None
     while line := next(ctx.lines, None):
         # Check macro handlers first

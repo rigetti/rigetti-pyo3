@@ -1,7 +1,6 @@
-"""
-Protocols for parsing Rust ``macro_rules!`` invocations.
-"""
+"""Protocols for parsing Rust ``macro_rules!`` invocations."""
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import (
@@ -10,7 +9,6 @@ from typing import (
     TypeAlias,
     runtime_checkable,
 )
-import re
 
 from .package import Package, SubmoduleRegistry
 from .reader import Line, Lines
@@ -61,9 +59,11 @@ class PatternHandler(MacroHandler):
     f: Callable[[MacroContext, str | None], None]
 
     def matches(self, line: Line) -> bool:
+        """Return `True` if the given line matches the pattern."""
         return re.search(self.pattern, line.text) is not None
 
     def handle(self, ctx: MacroContext, module: str | None = None):
+        """Process the macro invocation using the stored function `f`."""
         self.f(ctx, module)
 
 
@@ -71,7 +71,6 @@ def macro_handler(
     pattern: re.Pattern | str,
 ) -> Callable[[Callable[[MacroContext, str | None], None]], MacroHandler]:
     """Wrap a function that parses a macro when the current line matches the given pattern."""
-
     if isinstance(pattern, str):
         pattern = re.compile(pattern)
 

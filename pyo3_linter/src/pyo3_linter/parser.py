@@ -1,10 +1,12 @@
-from pathlib import Path
+"""Provides an opinionated, reusable parser for lint scripts."""
 import argparse
 import logging
+from pathlib import Path
 
 
 def get_parser(default_path=Path("./src")) -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Lint quil-py source files.")
+    """Return a parser useful for scripts meant to lint Rust source with this package."""
+    parser = argparse.ArgumentParser(description="Lint PyO3-related source files.")
 
     parser.add_argument(
         "-b",
