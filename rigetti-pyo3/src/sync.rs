@@ -1,5 +1,118 @@
-//! Macros that allow asynchronous Rust functions to be exported as synchronous Python functions.
+//! Helpers that allow asynchronous Rust functions to be exported as synchronous Python functions.
 
+use pyo3::prelude::*;
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::{PyStubType, TypeInfo};
+use std::marker::PhantomData;
+
+/// The result of an asynchronous Python function.
+///
+/// When using `pyo3_async_runtimes`, functions that aren't meant to be `await`ed in Python
+/// are created in Rust as synchronous with a return type of `Bound<'_, PyAny>`.
+/// This type makes it clear that the function is in fact async (that it should be `await`ed),
+/// and it provides access to the actual return type,
+/// which enables a `PyStubType` implementation, and hence automatic stub generation.
+///
+/// # Example
+///
+/// ```
+/// use pyo3::prelude::*;
+/// use pyo3::py_run;
+/// use pyo3_async_runtimes::tokio::future_into_py;
+/// use rigetti_pyo3::sync::Awaitable;
+///
+/// # fn main() {
+/// #[pyclass]
+/// struct MyClass {
+///     message: String,
+/// }
+///
+/// #[pymethods]
+/// impl MyClass {
+///     fn get_message<'py>(&self, py: Python<'py>) -> PyResult<Awaitable<'py, String>> {
+///         let msg = self.message.clone();
+///         future_into_py(py, async move { Ok(msg) }).map(Into::into)
+///     }
+/// }
+///
+/// Python::initialize();
+/// Python::attach(|py| {
+///     let data = MyClass { message: "hello, world!".to_string() };
+///     let data = Py::new(py, data).unwrap();
+///     let MyClass = py.get_type::<MyClass>();
+///
+///     py_run!(py, data MyClass, r#"
+/// import asyncio
+///
+/// async def check_message(inst: MyClass) -> None:
+///     message = await inst.get_message()
+///     assert message == "hello, world!"
+///
+/// asyncio.run(check_message(data))
+///         "#);
+/// })
+/// # }
+/// ```
+#[derive(Debug, Clone)]
+pub struct Awaitable<'py, T>(pub Bound<'py, PyAny>, PhantomData<T>);
+
+impl<'py, T> Awaitable<'py, T> {
+    /// Create a new `Awaitable` from a Python object.
+    #[must_use]
+    pub const fn new(obj: Bound<'py, PyAny>) -> Self {
+        Awaitable(obj, PhantomData)
+    }
+}
+
+impl<'py, T> FromPyObject<'_, 'py> for Awaitable<'py, T> {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        Ok(Awaitable(obj.to_owned(), PhantomData))
+    }
+}
+
+impl<'py, T> IntoPyObject<'py> for Awaitable<'py, T> {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = std::convert::Infallible;
+
+    fn into_pyobject(self, _: Python<'py>) -> Result<Self::Output, Self::Error> {
+        Ok(self.0)
+    }
+}
+
+impl<'a, 'py, T> IntoPyObject<'py> for &'a Awaitable<'py, T> {
+    type Target = PyAny;
+    type Output = Borrowed<'a, 'py, Self::Target>;
+    type Error = std::convert::Infallible;
+
+    fn into_pyobject(self, _: Python<'py>) -> Result<Self::Output, Self::Error> {
+        Ok(self.0.as_borrowed())
+    }
+}
+
+impl<'py, T> From<Bound<'py, PyAny>> for Awaitable<'py, T> {
+    fn from(obj: Bound<'py, PyAny>) -> Self {
+        Awaitable::new(obj)
+    }
+}
+
+#[cfg(feature = "stubs")]
+impl<T> PyStubType for Awaitable<'_, T>
+where
+    T: PyStubType,
+{
+    fn type_output() -> TypeInfo {
+        let TypeInfo { name, mut import } = T::type_output();
+        let name = format!("collections.abc.Awaitable[{name}]");
+        import.insert("collections.abc".into());
+
+        TypeInfo { name, import }
+    }
+}
+
+#[cfg(feature = "async-tokio")]
 /// Spawn and block on a future using the pyo3 tokio runtime.
 /// Useful for returning a synchronous `PyResult`.
 ///
@@ -23,22 +136,22 @@
 #[macro_export]
 macro_rules! py_sync {
     ($py: ident, $body: expr) => {{
-        $py.allow_threads(|| {
-            let runtime = ::pyo3_asyncio::tokio::get_runtime();
+        $py.detach(|| {
+            let runtime = $crate::pyo3_async_runtimes::tokio::get_runtime();
             let handle = runtime.spawn($body);
 
             runtime.block_on(async {
-                tokio::select! {
-                    result = handle => result.map_err(|err| ::pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?,
+                $crate::tokio::select! {
+                    result = handle => result.map_err(|err| $crate::pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?,
                     signal_err = async {
                         // A 100ms loop delay is a bit arbitrary, but seems to
                         // balance CPU usage and SIGINT responsiveness well enough.
                         let delay = ::std::time::Duration::from_millis(100);
                         loop {
-                            ::pyo3::Python::with_gil(|py| {
+                            $crate::pyo3::Python::attach(|py| {
                                 py.check_signals()
                             })?;
-                            ::tokio::time::sleep(delay).await;
+                            $crate::tokio::time::sleep(delay).await;
                         }
                     } => signal_err,
                 }
@@ -47,15 +160,18 @@ macro_rules! py_sync {
     }};
 }
 
+#[cfg(feature = "async-tokio")]
 /// Convert a rust future into a Python awaitable using
-/// `pyo3_asyncio::tokio::future_into_py`
+/// `pyo3_async_runtimes::tokio::future_into_py`
 #[macro_export]
 macro_rules! py_async {
     ($py: ident, $body: expr) => {
-        ::pyo3_asyncio::tokio::future_into_py($py, $body)
+        $crate::pyo3_async_runtimes::tokio::future_into_py($py, $body)
     };
 }
 
+/// Generate sync and async functions from a single implementation of an async function.
+///
 /// Given a single implementation of an async function,
 /// create that function as private and two pyfunctions
 /// named after it that can be used to invoke either
@@ -103,30 +219,83 @@ macro_rules! py_async {
 /// assert do_thing() == "done"
 /// assert await do_thing_async() == "done"
 /// ```
+///
+/// With the `opentelemetry` feature enabled, this macro ensures Opentelemetry contexts are propagated.
 #[macro_export]
 macro_rules! py_function_sync_async {
     (
         $(#[$meta: meta])+
-        async fn $name: ident($($(#[$arg_meta: meta])*$arg: ident : $kind: ty),* $(,)?) $(-> $ret: ty)? $body: block
+        $pub:vis async fn $name:ident($($(#[$arg_meta: meta])*$arg: ident : $kind: ty),* $(,)?)
+        $(-> PyResult<$ret: ty>)? $body: block
     ) => {
-        async fn $name($($arg: $kind,)*) $(-> $ret)? {
+        ::paste::paste! {
+        async fn [< $name _impl >]($($arg: $kind,)*) $(-> PyResult<$ret>)? {
             $body
         }
 
-        ::paste::paste! {
         $(#[$meta])+
-        #[allow(clippy::too_many_arguments, missing_docs)]
+        #[allow(clippy::too_many_arguments)]
         #[pyo3(name = $name "")]
-        pub(crate) fn [< py_ $name >](py: ::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> $ret)? {
-            $crate::py_sync!(py, $name($($arg),*))
+        $pub fn [< py_ $name >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> PyResult<$ret>)? {
+            let res = $crate::sync::add_context_if_otel([< $name _impl >]($($arg),*));
+            $crate::pyo3_async_runtimes::tokio::run(py, res)
+        }
         }
 
+        $crate::py_function_sync_async! {
+            @async_block {
+                $(#[$meta])+
+                $pub async fn $name($($(#[$arg_meta])*$arg : $kind),*) $(-> PyResult<$ret>)? $body
+            }
+        }
+    };
+
+    (
+        @async_block {
+            $(#[$meta: meta])+
+            $pub:vis async fn $name:ident($($(#[$arg_meta: meta])*$arg: ident : $kind: ty),* $(,)?) $body: block
+        }
+    ) => {
+        $crate::py_function_sync_async! {
+            @async_block {
+                $(#[$meta])+
+                $pub async fn $name($($(#[$arg_meta])*$arg: $kind),*) -> () $body
+            }
+        };
+    };
+
+    (
+        @async_block {
+            $(#[$meta: meta])+
+            $pub:vis async fn $name:ident($($(#[$arg_meta: meta])*$arg: ident : $kind: ty),* $(,)?)
+            -> PyResult<$ret:ty> $body: block
+        }
+    ) => {
+        ::paste::paste! {
         $(#[$meta])+
         #[pyo3(name = $name "_async")]
-        #[allow(clippy::too_many_arguments, missing_docs)]
-        pub(crate) fn [< py_ $name _async >](py: ::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) -> ::pyo3::PyResult<&::pyo3::PyAny> {
-            $crate::py_async!(py, $name($($arg),*))
+        #[allow(clippy::too_many_arguments)]
+        $pub fn [< py_ $name _async >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*)
+            -> ::pyo3::PyResult<$crate::sync::Awaitable<'_, $ret>>
+        {
+            let res = $crate::sync::add_context_if_otel([< $name _impl >]($($arg),*));
+            $crate::pyo3_async_runtimes::tokio::future_into_py(py, res)
+                .map($crate::sync::Awaitable::new)
         }
         }
     };
+}
+
+/// Adds a context, as the `opentelemetry` feature was enabled at build time.
+#[cfg(feature = "opentelemetry")]
+pub fn add_context_if_otel<T>(res: T) -> opentelemetry::trace::WithContext<T> {
+    use opentelemetry::trace::FutureExt;
+    res.with_current_context()
+}
+
+/// Acts as an identity function, as the `opentelemetry` feature was not enabled at build time.
+#[cfg(not(feature = "opentelemetry"))]
+#[inline]
+pub const fn add_context_if_otel<T>(res: T) -> T {
+    res
 }
