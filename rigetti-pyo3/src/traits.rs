@@ -14,35 +14,40 @@
 
 //! Macros for implementing "dunder" methods based on traits.
 
-#[cfg(not(feature = "stubs"))]
-/// Implement `__repr__` for a type that implement [`Debug`](std::fmt::Debug).
+/// Implement `__repr__` for a type that implements [`Debug`](std::fmt::Debug).
 #[macro_export]
 macro_rules! impl_repr {
-    ($name: ident) => {
-        #[$crate::pyo3::pymethods]
-        impl $name {
-            /// Implements `__repr__` for Python in terms of the Rust
-            /// [`Debug`](std::fmt::Debug) implementation.
-            pub fn __repr__(&self) -> String {
-                format!("{self:?}")
+    ($($name:ident),* $(,)?) => {
+        $(
+            $crate::maybe_add_cfg_stubs_gen_stub_pymethods! {
+                #[$crate::pyo3::pymethods]
+                impl $name {
+                    /// Implements `__repr__` for Python in terms of the Rust
+                    /// [`Debug`](std::fmt::Debug) implementation.
+                    pub fn __repr__(&self) -> String {
+                        format!("{self:?}")
+                    }
+                }
             }
-        }
+        )*
     };
 }
 
-#[cfg(feature = "stubs")]
-/// Implement `__repr__` for a type that implement [`Debug`](std::fmt::Debug).
+#[cfg(not(feature = "stubs"))]
+#[doc(hidden)]
 #[macro_export]
-macro_rules! impl_repr {
-    ($name: ident) => {
+macro_rules! maybe_add_cfg_stubs_gen_stub_pymethods {
+    ($($body:tt)*) => {
+        $($body)*
+    }
+}
+
+#[cfg(feature = "stubs")]
+#[doc(hidden)]
+#[macro_export]
+macro_rules! maybe_add_cfg_stubs_gen_stub_pymethods {
+    ($($body:tt)*) => {
         #[cfg_attr(feature = "stubs", $crate::pyo3_stub_gen::derive::gen_stub_pymethods)]
-        #[$crate::pyo3::pymethods]
-        impl $name {
-            /// Implements `__repr__` for Python in terms of the Rust
-            /// [`Debug`](std::fmt::Debug) implementation.
-            pub fn __repr__(&self) -> String {
-                format!("{self:?}")
-            }
-        }
-    };
+        $($body)*
+    }
 }

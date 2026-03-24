@@ -4,10 +4,10 @@
 /// Create a new Python exception.
 #[macro_export]
 macro_rules! create_exception {
-    ( $module:expr, $py_err: ident, $base: ty ) => {
+    ( $module:expr, $py_err:ident, $base:ty $(,)? ) => {
         $crate::create_exception!($module, $py_err, $base, "");
     };
-    ( $module:expr, $py_err: ident, $base: ty, $doc: expr ) => {
+    ( $module:expr, $py_err:ident, $base:ty, $doc:expr $(,)? ) => {
         $crate::pyo3::create_exception!($module, $py_err, $base, $doc);
     };
 }
@@ -17,10 +17,10 @@ macro_rules! create_exception {
 /// based on whether a "stubs" features is active.
 #[macro_export]
 macro_rules! create_exception {
-    ( $module:expr, $py_err: ident, $base: ty ) => {
+    ( $module:expr, $py_err:ident, $base:ty $(,)? ) => {
         $crate::create_exception!($module, $py_err, $base, "");
     };
-    ( $module:expr, $py_err: ident, $base: ty, $doc: expr ) => {
+    ( $module:expr, $py_err:ident, $base:ty, $doc:expr $(,)? ) => {
         $crate::pyo3::create_exception!($module, $py_err, $base, $doc);
 
         #[cfg(feature = "stubs")]
@@ -57,7 +57,7 @@ macro_rules! create_exception {
 /// Note that the exception class must still be added to the module.
 #[macro_export]
 macro_rules! exception {
-    ( $rust_err: ty, $module:expr, $py_err: ident, $base: ty $(, $doc: expr)? ) => {
+    ( $rust_err:ty, $module:expr, $py_err:ident, $base:ty $(, $doc:expr)? $(,)? ) => {
         $crate::create_exception!( $module, $py_err, $base $(, $doc)? );
 
         #[doc = concat!(
