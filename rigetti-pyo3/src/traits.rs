@@ -19,7 +19,7 @@
 macro_rules! impl_repr {
     ($($name:ident),* $(,)?) => {
         $(
-            $crate::guard_with_cfg_stubs! {
+            $crate::maybe_add_cfg_stubs_gen_stub_pymethods! {
                 #[$crate::pyo3::pymethods]
                 impl $name {
                     /// Implements `__repr__` for Python in terms of the Rust
@@ -36,7 +36,7 @@ macro_rules! impl_repr {
 #[cfg(not(feature = "stubs"))]
 #[doc(hidden)]
 #[macro_export]
-macro_rules! guard_with_cfg_stubs {
+macro_rules! maybe_add_cfg_stubs_gen_stub_pymethods {
     ($($body:tt)*) => {
         $($body)*
     }
@@ -45,7 +45,7 @@ macro_rules! guard_with_cfg_stubs {
 #[cfg(feature = "stubs")]
 #[doc(hidden)]
 #[macro_export]
-macro_rules! guard_with_cfg_stubs {
+macro_rules! maybe_add_cfg_stubs_gen_stub_pymethods {
     ($($body:tt)*) => {
         #[cfg_attr(feature = "stubs", $crate::pyo3_stub_gen::derive::gen_stub_pymethods)]
         $($body)*
