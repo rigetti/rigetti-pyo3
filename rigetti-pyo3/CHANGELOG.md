@@ -1,3 +1,10 @@
+## 0.5.1-rc.0 (2026-03-24)
+
+### Features
+
+- allow `impl_repr!` macro to take multiple type names
+- macro ergonomics improvements
+
 ## 0.5.0 (2026-02-05)
 
 ### Breaking Changes
