@@ -1,3 +1,9 @@
+## 0.5.1-rc.0 (2026-03-25)
+
+### Features
+
+- macro ergonomics improvements (#67) (#68)
+
 ## 0.5.0 (2026-02-05)
 
 ### Breaking Changes
