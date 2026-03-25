@@ -142,12 +142,12 @@ use pyo3::{prelude::*, types::PyType};
 macro_rules! create_init_submodule {
     (
         $(#[$meta:meta])*
-        $(classes: [ $($class: ty),+ ],)?
-        $(complex_enums: [ $($complex_enum: ty),+ ],)?
-        $(consts: [ $($const: ident),+ ],)?
-        $(errors: [ $($error: ty),+ ],)?
-        $(funcs: [ $($func: path),+ ],)?
-        $(submodules: [ $($mod_name: literal: $init_submod: path),+ ],)?
+        $(classes: [ $($class: ty),+  $(,)? ],)?
+        $(complex_enums: [ $($complex_enum: ty),+ $(,)? ],)?
+        $(consts: [ $($const: ident),+ $(,)? ],)?
+        $(errors: [ $($error: ty),+ $(,)? ],)?
+        $(funcs: [ $($func: path),+ $(,)? ],)?
+        $(submodules: [ $($mod_name: literal: $init_submod: path),+ $(,)? ],)?
     ) => {
         $(#[$meta])*
         pub(crate) fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {

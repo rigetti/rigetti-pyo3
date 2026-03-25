@@ -124,8 +124,8 @@ where
 /// }
 ///
 /// #[pyo3(name="say_hello")]
-/// pub fn py_say_hello(name: String) -> PyResult<String> {
-///     py_sync!(say_hello(name))
+/// pub fn py_say_hello(py: Python<'_>, name: String) -> PyResult<String> {
+///     py_sync!(py, say_hello(name))
 /// }
 /// ```
 ///
@@ -135,14 +135,16 @@ where
 /// ```
 #[macro_export]
 macro_rules! py_sync {
-    ($py: ident, $body: expr) => {{
+    ($py:ident, $body:expr $(,)?) => {{
         $py.detach(|| {
             let runtime = $crate::pyo3_async_runtimes::tokio::get_runtime();
             let handle = runtime.spawn($body);
 
             runtime.block_on(async {
                 $crate::tokio::select! {
-                    result = handle => result.map_err(|err| $crate::pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?,
+                    result = handle => result.map_err(|err|
+                        $crate::pyo3::exceptions::PyRuntimeError::new_err(err.to_string())
+                    )?,
                     signal_err = async {
                         // A 100ms loop delay is a bit arbitrary, but seems to
                         // balance CPU usage and SIGINT responsiveness well enough.
@@ -165,7 +167,7 @@ macro_rules! py_sync {
 /// `pyo3_async_runtimes::tokio::future_into_py`
 #[macro_export]
 macro_rules! py_async {
-    ($py: ident, $body: expr) => {
+    ($py:ident, $body:expr $(,)?) => {
         $crate::pyo3_async_runtimes::tokio::future_into_py($py, $body)
     };
 }
