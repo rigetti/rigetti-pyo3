@@ -116,6 +116,10 @@ where
 /// Spawn and block on a future using the pyo3 tokio runtime.
 /// Useful for returning a synchronous `PyResult`.
 ///
+/// This function is only necessary as a workaround for https://github.com/PyO3/pyo3-async-runtimes/issues/81.
+///
+/// This is only a macro for backwards compatibility with older versions of the crate;
+/// we can replace it with a function in a breaking-change release.
 ///
 /// When used like the following:
 /// ```rs
@@ -136,29 +140,12 @@ where
 #[macro_export]
 macro_rules! py_sync {
     ($py:ident, $body:expr $(,)?) => {{
-        $py.detach(|| {
-            let runtime = $crate::pyo3_async_runtimes::tokio::get_runtime();
-            let handle = runtime.spawn($body);
-
-            runtime.block_on(async {
-                $crate::tokio::select! {
-                    result = handle => result.map_err(|err|
-                        $crate::pyo3::exceptions::PyRuntimeError::new_err(err.to_string())
-                    )?,
-                    signal_err = async {
-                        // A 100ms loop delay is a bit arbitrary, but seems to
-                        // balance CPU usage and SIGINT responsiveness well enough.
-                        let delay = ::std::time::Duration::from_millis(100);
-                        loop {
-                            $crate::pyo3::Python::attach(|py| {
-                                py.check_signals()
-                            })?;
-                            $crate::tokio::time::sleep(delay).await;
-                        }
-                    } => signal_err,
-                }
-            })
-        })
+        if let Ok(event_loop) = $crate::pyo3_async_runtimes::tokio::get_current_loop($py)
+        {
+            $crate::pyo3_async_runtimes::tokio::run_until_complete(event_loop, $body)
+        } else {
+            $crate::pyo3_async_runtimes::tokio::run($py, $body)
+        }
     }};
 }
 
@@ -193,8 +180,7 @@ macro_rules! py_async {
 ///
 /// This macro cannot be used when lifetime specifiers are
 /// required, or the pyfunction bodies need additional
-/// parameter handling besides simply calling out to
-/// the underlying `py_async` or `py_sync` macros.
+/// parameter handling.
 ///
 /// ```rs
 /// // ... becomes python package "things"
@@ -240,7 +226,7 @@ macro_rules! py_function_sync_async {
         #[pyo3(name = $name "")]
         $pub fn [< py_ $name >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> PyResult<$ret>)? {
             let res = $crate::sync::add_context_if_otel([< $name _impl >]($($arg),*));
-            $crate::pyo3_async_runtimes::tokio::run(py, res)
+            $crate::py_sync!(py, res)
         }
         }
 
