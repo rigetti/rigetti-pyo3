@@ -3,7 +3,13 @@
 use pyo3::prelude::*;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{PyStubType, TypeInfo};
-use std::marker::PhantomData;
+#[cfg(feature = "async-tokio")]
+use std::{
+    ffi::CString,
+    future::Future,
+    sync::{mpsc, Arc, Mutex},
+};
+use std::{marker::PhantomData, sync::LazyLock};
 
 /// The result of an asynchronous Python function.
 ///
@@ -116,8 +122,6 @@ where
 /// Spawn and block on a future using the pyo3 tokio runtime.
 /// Useful for returning a synchronous `PyResult`.
 ///
-/// This function is only necessary as a workaround for https://github.com/PyO3/pyo3-async-runtimes/issues/81.
-///
 /// This is only a macro for backwards compatibility with older versions of the crate;
 /// we can replace it with a function in a breaking-change release.
 ///
@@ -140,13 +144,88 @@ where
 #[macro_export]
 macro_rules! py_sync {
     ($py:ident, $body:expr $(,)?) => {{
-        if let Ok(event_loop) = $crate::pyo3_async_runtimes::tokio::get_current_loop($py)
-        {
-            $crate::pyo3_async_runtimes::tokio::run_until_complete(event_loop, $body)
-        } else {
-            $crate::pyo3_async_runtimes::tokio::run($py, $body)
-        }
+        $crate::sync::invoke_async_from_py_sync($body)
     }};
+}
+
+static PY_WORKER_EVENT_LOOP: LazyLock<Py<PyAny>> = LazyLock::new(|| {
+    // Spawn a Python thread; start an event loop there.
+    // Return a handle to the Python event loop.
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        Python::attach(|py| {
+            let code = CString::new(
+                r#"
+import asyncio
+
+# Create and set up the event loop
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
+# Run the loop indefinitely (this will block the thread from completing until cancelled)
+loop.run_until_complete(asyncio.sleep(float('inf')))
+"#,
+            )
+            .unwrap();
+            let module_name = CString::new("py_worker_event_loop").unwrap();
+
+            let module = PyModule::from_code(py, &code, &module_name, &module_name)
+                .expect("failed to create worker event loop module");
+
+            // Get the loop variable from the module
+            let loop_obj = module
+                .getattr("loop")
+                .expect("failed to get loop from module");
+
+            // Send the loop to the channel
+            let py_loop = loop_obj.into();
+            let _ = tx.send(py_loop);
+        })
+    });
+
+    // Wait for the worker thread to create and send the event loop
+    rx.recv()
+        .expect("failed to receive event loop from worker thread")
+});
+
+/// Spawn and block on a future using the pyo3 tokio runtime.
+/// Useful for returning a synchronous `PyResult`.
+///
+/// This function is only necessary as a workaround for https://github.com/PyO3/pyo3-async-runtimes/issues/81.
+///
+#[cfg(feature = "async-tokio")]
+pub async fn invoke_async_from_py_sync<F, T>(py: ::pyo3::Python<'_>, body: F) -> PyResult<T>
+where
+    F: Future<Output = PyResult<T>> + Send + 'static,
+    T: Send + Sync + 'static,
+{
+    // Copied from `pyo3_async_runtimes`:
+    let result_tx = Arc::new(Mutex::new(None));
+    let result_rx = Arc::clone(&result_tx);
+    let coro = ::pyo3_async_runtimes::tokio::future_into_py_with_locals(
+        py,
+        ::pyo3_async_runtimes::TaskLocals::new(PY_WORKER_EVENT_LOOP.bind(py).to_owned())
+            .copy_context(py)?,
+        async move {
+            let val = body.await?;
+            if let Ok(mut result) = result_tx.lock() {
+                *result = Some(val);
+            }
+            Ok(())
+        },
+    )?;
+
+    // Call `asyncio.run_coroutine_threadsafe` using `PY_WORKER_EVENT_LOOP`
+    let run_coro_threadsafe = py.import("asyncio")?.getattr("run_coroutine_threadsafe")?;
+    let concurrent_future =
+        run_coro_threadsafe.call((&coro, PY_WORKER_EVENT_LOOP.bind(py)), None)?;
+
+    // Block waiting for the result with a timeout
+    let timeout_secs = 30.0;
+    let _ = concurrent_future.call_method1("result", (timeout_secs,))?;
+
+    let result = result_rx.lock().unwrap().take().unwrap();
+    Ok(result)
 }
 
 #[cfg(feature = "async-tokio")]
