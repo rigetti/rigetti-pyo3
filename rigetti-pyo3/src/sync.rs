@@ -176,7 +176,7 @@ for _ in range(1000):
         break
     time.sleep(0.001)
 else:
-    raise RuntimeError("worker event loop failed to start")
+    raise RuntimeError("rigetti-pyo3 worker event loop failed to start")
 "#,
         )
         .unwrap();
@@ -232,26 +232,33 @@ where
     // because `run_coroutine_threadsafe` requires a coroutine specifically.
     let helper_code = CString::new(
         r"
-async def _to_coroutine(awaitable):
-    return await awaitable
+import asyncio
+
+def get_result(loop, awaitable):
+    async def _run_coroutine():
+        return await awaitable
+    
+    return asyncio.run_coroutine_threadsafe(
+        _run_coroutine(),
+        loop,
+    ).result(timeout=30)
 ",
     )
     .unwrap();
+
     let helper_module_name = CString::new("py_worker_event_loop_helper").unwrap();
     let helper_module =
         PyModule::from_code(py, &helper_code, &helper_module_name, &helper_module_name)?;
-    let wrapped_coro = helper_module.getattr("_to_coroutine")?.call1((&coro,))?;
 
-    // Call `asyncio.run_coroutine_threadsafe` using `PY_WORKER_EVENT_LOOP`
-    let run_coro_threadsafe = py.import("asyncio")?.getattr("run_coroutine_threadsafe")?;
-    let concurrent_future =
-        run_coro_threadsafe.call((wrapped_coro, PY_WORKER_EVENT_LOOP.bind(py)), None)?;
+    let _ = helper_module
+        .getattr("get_result")?
+        .call((PY_WORKER_EVENT_LOOP.bind(py), &coro), None)?;
 
-    // Block waiting for the result with a timeout
-    let timeout_secs = 30.0;
-    let _ = concurrent_future.call_method1("result", (timeout_secs,))?;
-
-    let result = result_rx.lock().unwrap().take().unwrap();
+    let result = result_rx
+        .lock()
+        .unwrap()
+        .take()
+        .expect("future must always produce either a result or an error");
     Ok(result)
 }
 
