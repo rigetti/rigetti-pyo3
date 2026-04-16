@@ -7,7 +7,7 @@ use pyo3_stub_gen::{PyStubType, TypeInfo};
 use std::{
     ffi::CString,
     future::Future,
-    sync::{mpsc, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 use std::{marker::PhantomData, sync::LazyLock};
 
@@ -144,48 +144,51 @@ where
 #[macro_export]
 macro_rules! py_sync {
     ($py:ident, $body:expr $(,)?) => {{
-        $crate::sync::invoke_async_from_py_sync($body)
+        $crate::sync::invoke_async_from_py_sync($py, $body)
     }};
 }
 
 static PY_WORKER_EVENT_LOOP: LazyLock<Py<PyAny>> = LazyLock::new(|| {
-    // Spawn a Python thread; start an event loop there.
-    // Return a handle to the Python event loop.
-    let (tx, rx) = mpsc::channel();
-    std::thread::spawn(move || {
-        Python::attach(|py| {
-            let code = CString::new(
-                r#"
+    // Create a worker event loop and start it on a Python-created daemon thread.
+    Python::attach(|py| {
+        let code = CString::new(
+            r#"
 import asyncio
+import threading
+import time
 
-# Create and set up the event loop
 loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
 
-# Run the loop indefinitely (this will block the thread from completing until cancelled)
-loop.run_until_complete(asyncio.sleep(float('inf')))
+def _run_loop() -> None:
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+thread = threading.Thread(
+    target=_run_loop,
+    name="rigetti-pyo3-worker-loop",
+    daemon=True,
+)
+thread.start()
+
+for _ in range(1000):
+    if loop.is_running():
+        break
+    time.sleep(0.001)
+else:
+    raise RuntimeError("worker event loop failed to start")
 "#,
-            )
-            .unwrap();
-            let module_name = CString::new("py_worker_event_loop").unwrap();
+        )
+        .unwrap();
+        let module_name = CString::new("py_worker_event_loop").unwrap();
 
-            let module = PyModule::from_code(py, &code, &module_name, &module_name)
-                .expect("failed to create worker event loop module");
+        let module = PyModule::from_code(py, &code, &module_name, &module_name)
+            .expect("failed to create worker event loop module");
 
-            // Get the loop variable from the module
-            let loop_obj = module
-                .getattr("loop")
-                .expect("failed to get loop from module");
-
-            // Send the loop to the channel
-            let py_loop = loop_obj.into();
-            let _ = tx.send(py_loop);
-        })
-    });
-
-    // Wait for the worker thread to create and send the event loop
-    rx.recv()
-        .expect("failed to receive event loop from worker thread")
+        module
+            .getattr("loop")
+            .expect("failed to get loop from module")
+            .into()
+    })
 });
 
 /// Spawn and block on a future using the pyo3 tokio runtime.
@@ -194,7 +197,7 @@ loop.run_until_complete(asyncio.sleep(float('inf')))
 /// This function is only necessary as a workaround for https://github.com/PyO3/pyo3-async-runtimes/issues/81.
 ///
 #[cfg(feature = "async-tokio")]
-pub async fn invoke_async_from_py_sync<F, T>(py: ::pyo3::Python<'_>, body: F) -> PyResult<T>
+pub fn invoke_async_from_py_sync<F, T>(py: ::pyo3::Python<'_>, body: F) -> PyResult<T>
 where
     F: Future<Output = PyResult<T>> + Send + 'static,
     T: Send + Sync + 'static,
@@ -215,10 +218,24 @@ where
         },
     )?;
 
+    // `future_into_py_with_locals` returns an awaitable; wrap it into a coroutine object
+    // because `run_coroutine_threadsafe` requires a coroutine specifically.
+    let helper_code = CString::new(
+        r#"
+async def _to_coroutine(awaitable):
+    return await awaitable
+"#,
+    )
+    .unwrap();
+    let helper_module_name = CString::new("py_worker_event_loop_helper").unwrap();
+    let helper_module =
+        PyModule::from_code(py, &helper_code, &helper_module_name, &helper_module_name)?;
+    let wrapped_coro = helper_module.getattr("_to_coroutine")?.call1((&coro,))?;
+
     // Call `asyncio.run_coroutine_threadsafe` using `PY_WORKER_EVENT_LOOP`
     let run_coro_threadsafe = py.import("asyncio")?.getattr("run_coroutine_threadsafe")?;
     let concurrent_future =
-        run_coro_threadsafe.call((&coro, PY_WORKER_EVENT_LOOP.bind(py)), None)?;
+        run_coro_threadsafe.call((wrapped_coro, PY_WORKER_EVENT_LOOP.bind(py)), None)?;
 
     // Block waiting for the result with a timeout
     let timeout_secs = 30.0;
@@ -305,7 +322,7 @@ macro_rules! py_function_sync_async {
         #[pyo3(name = $name "")]
         $pub fn [< py_ $name >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> PyResult<$ret>)? {
             let res = $crate::sync::add_context_if_otel([< $name _impl >]($($arg),*));
-            $crate::py_sync!(py, res)
+            $crate::sync::invoke_async_from_py_sync(py, res)
         }
         }
 
