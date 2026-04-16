@@ -148,8 +148,12 @@ macro_rules! py_sync {
     }};
 }
 
+/// The variable name to extract after executing `PY_CODE_WORKER_EVENT_LOOP` to get the worker event loop.
 // This must match the name of the value defined in `PY_CODE_WORKER_EVENT_LOOP` below.
 const PY_VARNAME_LOOP: &str = "loop";
+/// The Python code snippet to set up a long-running background thread to run Rust futures from a
+/// synchronous Python context.
+/// This should only be run once per process.
 const PY_CODE_WORKER_EVENT_LOOP: &str = r#"
 import asyncio
 import threading
@@ -173,8 +177,12 @@ _thread.start()
 loop = loop_fut.result(timeout=1)
 "#;
 
+/// The function name to extract after executing `PY_CODE_RUN_ON_LOOP` to get the helper function
+/// for running a coroutine on the worker event loop.
 // This must match the name of the function defined in `PY_CODE_RUN_ON_LOOP` below.
 const PY_FUNCNAME_RUN_ON_LOOP: &str = "get_result";
+/// The Python code snippet to run a coroutine on the worker event loop and block until it returns
+/// a result.
 const PY_CODE_RUN_ON_LOOP: &str = r"
 import asyncio
 
