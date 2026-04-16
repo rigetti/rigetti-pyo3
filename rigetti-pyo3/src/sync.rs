@@ -148,6 +148,7 @@ macro_rules! py_sync {
     }};
 }
 
+/// Worker event loop used for running asynchronous tasks from synchronous Python code.
 static PY_WORKER_EVENT_LOOP: LazyLock<Py<PyAny>> = LazyLock::new(|| {
     // Create a worker event loop and start it on a Python-created daemon thread.
     Python::attach(|py| {
@@ -194,8 +195,17 @@ else:
 /// Spawn and block on a future using the pyo3 tokio runtime.
 /// Useful for returning a synchronous `PyResult`.
 ///
-/// This function is only necessary as a workaround for https://github.com/PyO3/pyo3-async-runtimes/issues/81.
+/// This function is only necessary as a workaround for <https://github.com/PyO3/pyo3-async-runtimes/issues/81>.
 ///
+///
+/// # Errors
+///
+/// Returns the result of the asynchronous operation, or an error if the operation fails, or if a
+/// PyO3 failure prevents invoking the asynchronous operation.
+///
+/// # Panics
+///
+/// Panics if a lock has been poisoned or if certain string-literals are invalid C strings.
 #[cfg(feature = "async-tokio")]
 pub fn invoke_async_from_py_sync<F, T>(py: ::pyo3::Python<'_>, body: F) -> PyResult<T>
 where
@@ -221,10 +231,10 @@ where
     // `future_into_py_with_locals` returns an awaitable; wrap it into a coroutine object
     // because `run_coroutine_threadsafe` requires a coroutine specifically.
     let helper_code = CString::new(
-        r#"
+        r"
 async def _to_coroutine(awaitable):
     return await awaitable
-"#,
+",
     )
     .unwrap();
     let helper_module_name = CString::new("py_worker_event_loop_helper").unwrap();
