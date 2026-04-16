@@ -1,3 +1,9 @@
+## 0.5.2-rc.0 (2026-04-16)
+
+### Fixes
+
+- in synchronous functions calling async code, use existing Python event loop if possible
+
 ## 0.5.1 (2026-03-25)
 
 ### Features
