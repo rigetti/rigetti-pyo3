@@ -148,46 +148,58 @@ macro_rules! py_sync {
     }};
 }
 
+// This must match the name of the value defined in `PY_CODE_WORKER_EVENT_LOOP` below.
+const PY_VARNAME_LOOP: &str = "loop";
+const PY_CODE_WORKER_EVENT_LOOP: &str = r#"
+import asyncio
+import threading
+import concurrent.futures
+
+loop_fut = concurrent.futures.Future[asyncio.AbstractEventLoop]()
+
+def _run_loop() -> None:
+    loop = asyncio.new_event_loop()
+    loop_fut.set_result(loop)
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+_thread = threading.Thread(
+    target=_run_loop,
+    name="rigetti-pyo3-worker-loop",
+    # Daemon threads do not prevent the Python process from exiting.
+    daemon=True,
+)
+_thread.start()
+loop = loop_fut.result(timeout=1)
+"#;
+
+// This must match the name of the function defined in `PY_CODE_RUN_ON_LOOP` below.
+const PY_FUNCNAME_RUN_ON_LOOP: &str = "get_result";
+const PY_CODE_RUN_ON_LOOP: &str = r"
+import asyncio
+
+def get_result(loop, awaitable):
+    async def _run_coroutine():
+        return await awaitable
+    
+    return asyncio.run_coroutine_threadsafe(
+        _run_coroutine(),
+        loop,
+    ).result()
+";
+
 /// Worker event loop used for running asynchronous tasks from synchronous Python code.
 static PY_WORKER_EVENT_LOOP: LazyLock<Py<PyAny>> = LazyLock::new(|| {
     // Create a worker event loop and start it on a Python-created daemon thread.
     Python::attach(|py| {
-        let code = CString::new(
-            r#"
-import asyncio
-import threading
-import time
-
-loop = asyncio.new_event_loop()
-
-def _run_loop() -> None:
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
-
-thread = threading.Thread(
-    target=_run_loop,
-    name="rigetti-pyo3-worker-loop",
-    daemon=True,
-)
-thread.start()
-
-for _ in range(1000):
-    if loop.is_running():
-        break
-    time.sleep(0.001)
-else:
-    raise RuntimeError("rigetti-pyo3 worker event loop failed to start")
-"#,
-        )
-        .unwrap();
+        let code = CString::new(PY_CODE_WORKER_EVENT_LOOP).unwrap();
         let module_name = CString::new("py_worker_event_loop").unwrap();
-
         let module = PyModule::from_code(py, &code, &module_name, &module_name)
             .expect("failed to create worker event loop module");
 
         module
-            .getattr("loop")
-            .expect("failed to get loop from module")
+            .getattr(PY_VARNAME_LOOP)
+            .expect("failed to get Python event loop variable from module")
             .into()
     })
 });
@@ -230,28 +242,13 @@ where
 
     // `future_into_py_with_locals` returns an awaitable; wrap it into a coroutine object
     // because `run_coroutine_threadsafe` requires a coroutine specifically.
-    let helper_code = CString::new(
-        r"
-import asyncio
+    let code = CString::new(PY_CODE_RUN_ON_LOOP).unwrap();
 
-def get_result(loop, awaitable):
-    async def _run_coroutine():
-        return await awaitable
-    
-    return asyncio.run_coroutine_threadsafe(
-        _run_coroutine(),
-        loop,
-    ).result(timeout=30)
-",
-    )
-    .unwrap();
+    let module_name = CString::new("py_worker_event_loop_helper").unwrap();
+    let module = PyModule::from_code(py, &code, &module_name, &module_name)?;
 
-    let helper_module_name = CString::new("py_worker_event_loop_helper").unwrap();
-    let helper_module =
-        PyModule::from_code(py, &helper_code, &helper_module_name, &helper_module_name)?;
-
-    let _ = helper_module
-        .getattr("get_result")?
+    let _ = module
+        .getattr(PY_FUNCNAME_RUN_ON_LOOP)?
         .call((PY_WORKER_EVENT_LOOP.bind(py), &coro), None)?;
 
     let result = result_rx
