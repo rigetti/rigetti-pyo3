@@ -3,7 +3,13 @@
 use pyo3::prelude::*;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{PyStubType, TypeInfo};
-use std::marker::PhantomData;
+#[cfg(feature = "async-tokio")]
+use std::{
+    ffi::CString,
+    future::Future,
+    sync::{Arc, Mutex},
+};
+use std::{marker::PhantomData, sync::LazyLock};
 
 /// The result of an asynchronous Python function.
 ///
@@ -116,6 +122,8 @@ where
 /// Spawn and block on a future using the pyo3 tokio runtime.
 /// Useful for returning a synchronous `PyResult`.
 ///
+/// This is only a macro for backwards compatibility with older versions of the crate;
+/// we can replace it with a function in a breaking-change release.
 ///
 /// When used like the following:
 /// ```rs
@@ -136,30 +144,127 @@ where
 #[macro_export]
 macro_rules! py_sync {
     ($py:ident, $body:expr $(,)?) => {{
-        $py.detach(|| {
-            let runtime = $crate::pyo3_async_runtimes::tokio::get_runtime();
-            let handle = runtime.spawn($body);
-
-            runtime.block_on(async {
-                $crate::tokio::select! {
-                    result = handle => result.map_err(|err|
-                        $crate::pyo3::exceptions::PyRuntimeError::new_err(err.to_string())
-                    )?,
-                    signal_err = async {
-                        // A 100ms loop delay is a bit arbitrary, but seems to
-                        // balance CPU usage and SIGINT responsiveness well enough.
-                        let delay = ::std::time::Duration::from_millis(100);
-                        loop {
-                            $crate::pyo3::Python::attach(|py| {
-                                py.check_signals()
-                            })?;
-                            $crate::tokio::time::sleep(delay).await;
-                        }
-                    } => signal_err,
-                }
-            })
-        })
+        $crate::sync::invoke_async_from_py_sync($py, $body)
     }};
+}
+
+/// The variable name to extract after executing `PY_CODE_WORKER_EVENT_LOOP` to get the worker event loop.
+// This must match the name of the value defined in `PY_CODE_WORKER_EVENT_LOOP` below.
+const PY_VARNAME_LOOP: &str = "loop";
+/// The Python code snippet to set up a long-running background thread to run Rust futures from a
+/// synchronous Python context.
+/// This should only be run once per process.
+const PY_CODE_WORKER_EVENT_LOOP: &str = r#"
+import asyncio
+import threading
+import concurrent.futures
+
+loop_fut = concurrent.futures.Future[asyncio.AbstractEventLoop]()
+
+def _run_loop() -> None:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop_fut.set_result(loop)
+    loop.run_forever()
+
+_thread = threading.Thread(
+    target=_run_loop,
+    name="rigetti-pyo3-worker-loop",
+    # Daemon threads do not prevent the Python process from exiting.
+    daemon=True,
+)
+_thread.start()
+loop = loop_fut.result(timeout=1)
+"#;
+
+/// The function name to extract after executing `PY_CODE_RUN_ON_LOOP` to get the helper function
+/// for running a coroutine on the worker event loop.
+// This must match the name of the function defined in `PY_CODE_RUN_ON_LOOP` below.
+const PY_FUNCNAME_RUN_ON_LOOP: &str = "get_result";
+/// The Python code snippet to run a coroutine on the worker event loop and block until it returns
+/// a result.
+const PY_CODE_RUN_ON_LOOP: &str = r"
+import asyncio
+
+def get_result(loop, awaitable):
+    async def _run_coroutine():
+        return await awaitable
+    
+    return asyncio.run_coroutine_threadsafe(
+        _run_coroutine(),
+        loop,
+    ).result()
+";
+
+/// Worker event loop used for running asynchronous tasks from synchronous Python code.
+static PY_WORKER_EVENT_LOOP: LazyLock<Py<PyAny>> = LazyLock::new(|| {
+    // Create a worker event loop and start it on a Python-created daemon thread.
+    Python::attach(|py| {
+        let code = CString::new(PY_CODE_WORKER_EVENT_LOOP).unwrap();
+        let module_name = CString::new("py_worker_event_loop").unwrap();
+        let module = PyModule::from_code(py, &code, &module_name, &module_name)
+            .expect("failed to create worker event loop module");
+
+        module
+            .getattr(PY_VARNAME_LOOP)
+            .expect("failed to get Python event loop variable from module")
+            .into()
+    })
+});
+
+/// Spawn and block on a future using the pyo3 tokio runtime.
+/// Useful for returning a synchronous `PyResult`.
+///
+/// This function is only necessary as a workaround for <https://github.com/PyO3/pyo3-async-runtimes/issues/81>.
+///
+///
+/// # Errors
+///
+/// Returns the result of the asynchronous operation, or an error if the operation fails, or if a
+/// PyO3 failure prevents invoking the asynchronous operation.
+///
+/// # Panics
+///
+/// Panics if a lock has been poisoned or if certain string-literals are invalid C strings.
+#[cfg(feature = "async-tokio")]
+pub fn invoke_async_from_py_sync<F, T>(py: ::pyo3::Python<'_>, body: F) -> PyResult<T>
+where
+    F: Future<Output = PyResult<T>> + Send + 'static,
+    T: Send + Sync + 'static,
+{
+    // Copied from `pyo3_async_runtimes`:
+    let result_tx = Arc::new(Mutex::new(None));
+    let result_rx = Arc::clone(&result_tx);
+    let coro = ::pyo3_async_runtimes::tokio::future_into_py_with_locals(
+        py,
+        ::pyo3_async_runtimes::TaskLocals::new(PY_WORKER_EVENT_LOOP.bind(py).to_owned())
+            .copy_context(py)?,
+        async move {
+            let val = body.await?;
+            if let Ok(mut result) = result_tx.lock() {
+                *result = Some(val);
+            }
+            Ok(())
+        },
+    )?;
+
+    // `future_into_py_with_locals` returns an awaitable; wrap it into a coroutine object
+    // because `run_coroutine_threadsafe` requires a coroutine specifically.
+    let code = CString::new(PY_CODE_RUN_ON_LOOP).unwrap();
+
+    let module_name = CString::new("py_worker_event_loop_helper").unwrap();
+    let module = PyModule::from_code(py, &code, &module_name, &module_name)?;
+
+    let _ = module
+        .getattr(PY_FUNCNAME_RUN_ON_LOOP)?
+        .call((PY_WORKER_EVENT_LOOP.bind(py), &coro), None)?;
+
+    let result = result_rx
+        .lock()
+        .unwrap()
+        .take()
+        .expect("future must always produce either a result or an error");
+    Ok(result)
 }
 
 #[cfg(feature = "async-tokio")]
@@ -193,8 +298,7 @@ macro_rules! py_async {
 ///
 /// This macro cannot be used when lifetime specifiers are
 /// required, or the pyfunction bodies need additional
-/// parameter handling besides simply calling out to
-/// the underlying `py_async` or `py_sync` macros.
+/// parameter handling.
 ///
 /// ```rs
 /// // ... becomes python package "things"
@@ -240,7 +344,7 @@ macro_rules! py_function_sync_async {
         #[pyo3(name = $name "")]
         $pub fn [< py_ $name >](py: $crate::pyo3::Python<'_> $(, $(#[$arg_meta])*$arg: $kind)*) $(-> PyResult<$ret>)? {
             let res = $crate::sync::add_context_if_otel([< $name _impl >]($($arg),*));
-            $crate::pyo3_async_runtimes::tokio::run(py, res)
+            $crate::sync::invoke_async_from_py_sync(py, res)
         }
         }
 
