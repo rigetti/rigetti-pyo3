@@ -163,8 +163,8 @@ loop_fut = concurrent.futures.Future[asyncio.AbstractEventLoop]()
 
 def _run_loop() -> None:
     loop = asyncio.new_event_loop()
-    loop_fut.set_result(loop)
     asyncio.set_event_loop(loop)
+    loop_fut.set_result(loop)
     loop.run_forever()
 
 _thread = threading.Thread(
