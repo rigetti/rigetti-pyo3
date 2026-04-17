@@ -1,3 +1,9 @@
+## 0.5.2 (2026-04-17)
+
+### Fixes
+
+- use existing Python event loop from synchronous functions, when possible (#70)
+
 ## 0.5.2-rc.0 (2026-04-16)
 
 ### Fixes
