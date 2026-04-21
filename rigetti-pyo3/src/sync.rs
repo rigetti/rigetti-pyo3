@@ -11,9 +11,6 @@ use std::{
 };
 use std::{marker::PhantomData, sync::LazyLock};
 
-// Re-export `pastey` for use in macros.
-pub use pastey::paste;
-
 /// The result of an asynchronous Python function.
 ///
 /// When using `pyo3_async_runtimes`, functions that aren't meant to be `await`ed in Python

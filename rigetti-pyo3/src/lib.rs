@@ -73,6 +73,9 @@ pub mod stubs;
 pub mod sync;
 mod traits;
 
+#[cfg(feature = "async-tokio")]
+pub use pastey::paste;
+
 pub use pyo3;
 #[cfg(feature = "async-tokio")]
 pub use pyo3_async_runtimes;
