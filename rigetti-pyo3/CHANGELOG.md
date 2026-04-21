@@ -1,3 +1,9 @@
+## 0.5.4-rc.0 (2026-04-21)
+
+### Fixes
+
+- move re-exported 'paste' macro to crate level (#76)
+
 ## 0.5.3 (2026-04-21)
 
 ### Fixes
