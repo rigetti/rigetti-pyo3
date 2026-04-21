@@ -11,6 +11,9 @@ use std::{
 };
 use std::{marker::PhantomData, sync::LazyLock};
 
+// Re-export `pastey` for use in macros.
+pub use pastey::paste;
+
 /// The result of an asynchronous Python function.
 ///
 /// When using `pyo3_async_runtimes`, functions that aren't meant to be `await`ed in Python
@@ -334,7 +337,7 @@ macro_rules! py_function_sync_async {
         $pub:vis async fn $name:ident($($(#[$arg_meta: meta])*$arg: ident : $kind: ty),* $(,)?)
         $(-> PyResult<$ret: ty>)? $body: block
     ) => {
-        ::paste::paste! {
+        $crate::paste! {
         async fn [< $name _impl >]($($arg: $kind,)*) $(-> PyResult<$ret>)? {
             $body
         }
@@ -377,7 +380,7 @@ macro_rules! py_function_sync_async {
             -> PyResult<$ret:ty> $body: block
         }
     ) => {
-        ::paste::paste! {
+        $crate::paste! {
         $(#[$meta])+
         #[pyo3(name = $name "_async")]
         #[allow(clippy::too_many_arguments)]
