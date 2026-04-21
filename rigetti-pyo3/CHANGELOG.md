@@ -1,3 +1,9 @@
+## 0.5.3 (2026-04-21)
+
+### Fixes
+
+- switch to 'pastey' crate, and don't rely on the top-level crate to directly depend on paste or pastey
+
 ## 0.5.3-rc.0 (2026-04-21)
 
 ### Fixes
