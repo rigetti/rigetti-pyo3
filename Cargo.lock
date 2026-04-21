@@ -457,6 +457,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pastey"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b867cad97c0791bbd3aaa6472142568c6c9e8f71937e98379f584cfb0cf35bec"
+
+[[package]]
 name = "phf"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -704,6 +710,7 @@ dependencies = [
  "itertools 0.14.0",
  "opentelemetry",
  "optipy",
+ "pastey",
  "pyo3",
  "pyo3-async-runtimes",
  "pyo3-stub-gen",

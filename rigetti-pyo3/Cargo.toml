@@ -21,6 +21,7 @@ stubs = [
 async-tokio = ["dep:pyo3-async-runtimes", "dep:tokio"]
 
 [dependencies]
+pastey = "0.2"
 
 # Enabled with the `stubs` feature.
 indexmap = { version = "2.2.6", optional = true }
