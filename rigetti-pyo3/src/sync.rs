@@ -394,8 +394,10 @@ macro_rules! py_function_sync_async {
 
 /// Adds a context, as the `opentelemetry` feature was enabled at build time.
 #[cfg(feature = "opentelemetry")]
-pub fn add_context_if_otel<T>(res: T) -> opentelemetry::trace::WithContext<T> {
-    use opentelemetry::trace::FutureExt;
+pub fn add_context_if_otel<T>(
+    res: T,
+) -> qcs_dependencies_client::opentelemetry::trace::WithContext<T> {
+    use qcs_dependencies_client::opentelemetry::trace::FutureExt;
     res.with_current_context()
 }
 
