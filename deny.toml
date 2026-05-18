@@ -84,7 +84,7 @@ external-default-features = "allow"
 allow = [
 ]
 deny = [
-    { crate = "qcs-dependencies-client",      deny-multiple-versions = true },
+    { crate = "qcs-dependencies-client", deny-multiple-versions = true },
     { crate = "http", deny-multiple-versions = true },
     { crate = "opentelemetry", deny-multiple-versions = true },
     { crate = "opentelemetry-http", deny-multiple-versions = true },
