@@ -4,7 +4,11 @@ changelog = "rigetti-pyo3/CHANGELOG.md"
 scopes = ["rigetti-pyo3"]
 
 [packages.optipy]
-versioned_files = ["optipy/Cargo.toml", "Cargo.lock"]
+versioned_files = [
+    "optipy/Cargo.toml",
+    "Cargo.lock",
+    { path = "Cargo.toml", dependency = "optipy" },
+]
 changelog = "optipy/CHANGELOG.md"
 scopes = ["optipy"]
 
