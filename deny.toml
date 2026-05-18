@@ -3,6 +3,15 @@
 # be toggled off if true, if you want to conditionally enable `--all-features` it
 # is recommended to pass `--all-features` on the cmd line instead
 all-features = true
+# These are all supported targets for the QCS-API-clients and QCS-SDK.
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "aarch64-unknown-linux-musl",
+    "x86_64-unknown-linux-musl",
+    "x86_64-pc-windows-msvc",
+]
+exclude-dev = true
 
 # The output table provides options for how/if diagnostics are outputted
 [output]
@@ -21,6 +30,7 @@ ignore = [
   { id = "RUSTSEC-2025-0090", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0100", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
 ]
+unused-ignored-advisory = "deny"
 
 [licenses]
 unused-allowed-license = "allow"
@@ -33,7 +43,6 @@ allow = [
   "CC0-1.0",
   "ISC",
   "MIT",
-  "OpenSSL",
   "Unicode-3.0",
   "Unicode-DFS-2016",
   "Zlib",
@@ -75,6 +84,30 @@ external-default-features = "allow"
 allow = [
 ]
 deny = [
+    { crate = "qcs-dependencies-client", deny-multiple-versions = true },
+    { crate = "http", deny-multiple-versions = true },
+    { crate = "opentelemetry", deny-multiple-versions = true },
+    { crate = "opentelemetry-http", deny-multiple-versions = true },
+    { crate = "opentelemetry-otlp", deny-multiple-versions = true },
+    { crate = "opentelemetry_sdk", deny-multiple-versions = true },
+    { crate = "pbjson", deny-multiple-versions = true },
+    { crate = "pbjson-types", deny-multiple-versions = true },
+    { crate = "poem", deny-multiple-versions = true },
+    { crate = "poem-openapi", deny-multiple-versions = true },
+    { crate = "prost", deny-multiple-versions = true },
+    { crate = "prost-types", deny-multiple-versions = true },
+    { crate = "reqwest", deny-multiple-versions = true },
+    { crate = "reqwest-middleware", deny-multiple-versions = true },
+    { crate = "reqwest-tracing", deny-multiple-versions = true },
+    { crate = "sentry-tower", deny-multiple-versions = true },
+    { crate = "tonic", deny-multiple-versions = true },
+    { crate = "tonic-health", deny-multiple-versions = true },
+    { crate = "tonic-prost", deny-multiple-versions = true },
+    { crate = "tonic-web", deny-multiple-versions = true },
+    { crate = "tower", deny-multiple-versions = true },
+    { crate = "tower-http", deny-multiple-versions = true },
+    { crate = "tracing-core", deny-multiple-versions = true },
+    { crate = "tracing-opentelemetry", deny-multiple-versions = true },
 ]
 
 # Certain crates/versions that will be skipped when doing duplicate detection.
