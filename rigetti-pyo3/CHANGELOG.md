@@ -1,3 +1,9 @@
+## 0.5.6-rc.0 (2026-05-18)
+
+### Features
+
+- adopt qcs-dependencies-client crate (#77)
+
 ## 0.5.4 (2026-04-21)
 
 ### Fixes
