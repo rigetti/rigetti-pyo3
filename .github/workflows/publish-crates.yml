@@ -8,7 +8,12 @@ on:
 
 jobs:
   publish-rigetti-pyo3:
-    if: ${{ github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'rigetti-pyo3/v') }}
+    needs: [publish-optipy]
+    # the `always()` here is to ensure that the other conditions are evaluated even if `publish-optipy` was skipped
+    if: |
+      always() &&
+      (needs.publish-optipy.result == 'success' || needs.publish-optipy.result == 'skipped') &&
+      (github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'rigetti-pyo3/v'))
 
     runs-on: ubuntu-latest
     name: Publish rigetti-pyo3
