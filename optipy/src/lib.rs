@@ -22,8 +22,8 @@ use quote::quote;
 use syn::{
     parse_macro_input,
     visit_mut::{self, VisitMut},
-    Attribute, Field, ImplItemFn, Item, ItemEnum, ItemFn, ItemImpl, ItemMod, ItemStruct, PatType,
-    Receiver, Variant,
+    Attribute, Field, ImplItemConst, ImplItemFn, Item, ItemEnum, ItemFn, ItemImpl, ItemMod,
+    ItemStruct, PatType, Receiver, Variant,
 };
 
 #[proc_macro_attribute]
@@ -62,6 +62,7 @@ macro_rules! filter_visitor {
 /// Implement visitors that strip PyO3 attributes from relevant types.
 impl VisitMut for StripPyO3 {
     filter_visitor!(visit_field_mut(Field));
+    filter_visitor!(visit_impl_item_const_mut(ImplItemConst));
     filter_visitor!(visit_impl_item_fn_mut(ImplItemFn));
     filter_visitor!(visit_item_enum_mut(ItemEnum));
     filter_visitor!(visit_item_fn_mut(ItemFn));
