@@ -1,3 +1,9 @@
+## 0.5.6 (2026-05-27)
+
+### Fixes
+
+- strip_pyo3 must visit const items (#80)
+
 ## 0.5.6-rc.0 (2026-05-27)
 
 ### Fixes
