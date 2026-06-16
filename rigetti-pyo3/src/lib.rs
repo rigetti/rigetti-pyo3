@@ -84,6 +84,9 @@ pub use pyo3_stub_gen;
 #[cfg(feature = "async-tokio")]
 pub use tokio;
 
+#[cfg(feature = "serde")]
+pub use pythonize;
+
 use pyo3::{prelude::*, types::PyType};
 
 /// Create a crate-private function `init_submodule` to set up this submodule and call the same
