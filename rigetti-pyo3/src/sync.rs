@@ -110,11 +110,21 @@ where
     T: PyStubType,
 {
     fn type_output() -> TypeInfo {
-        let TypeInfo { name, mut import } = T::type_output();
+        let TypeInfo {
+            name,
+            mut import,
+            source_module,
+            type_refs,
+        } = T::type_output();
         let name = format!("collections.abc.Awaitable[{name}]");
         import.insert("collections.abc".into());
 
-        TypeInfo { name, import }
+        TypeInfo {
+            name,
+            import,
+            source_module,
+            type_refs,
+        }
     }
 }
 
@@ -189,7 +199,7 @@ import asyncio
 def get_result(loop, awaitable):
     async def _run_coroutine():
         return await awaitable
-    
+
     return asyncio.run_coroutine_threadsafe(
         _run_coroutine(),
         loop,

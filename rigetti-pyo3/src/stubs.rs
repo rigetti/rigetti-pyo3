@@ -11,7 +11,15 @@
 //!
 //! ```rust
 //! # fn stub_info() -> pyo3_stub_gen::Result<pyo3_stub_gen::generate::StubInfo> {
-//! #   Ok(pyo3_stub_gen::generate::StubInfo{ modules: Default::default(), python_root: Default::default() })
+//! #   Ok(pyo3_stub_gen::generate::StubInfo{
+//! #       modules: Default::default(),
+//! #       python_root: Default::default(),
+//! #       is_mixed_layout: Default::default(),
+//! #       config: Default::default(),
+//! #       pyproject_dir: Default::default(),
+//! #       default_module_name: Default::default(),
+//! #       project_name: Default::default(),
+//! #   })
 //! # }
 //! fn main() -> pyo3_stub_gen::Result<()> {
 //!    let mut stub = stub_info()?; // see [`pyo3_stub_gen::generate::StubInfo`]
@@ -23,7 +31,7 @@
 
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
 };
 
 use indexmap::IndexMap;
@@ -34,7 +42,7 @@ use pyo3_stub_gen::{
         Parameters,
     },
     type_info::{DeprecatedInfo, IgnoreTarget, ParameterKind},
-    StubInfo, TypeInfo,
+    ImportKind, StubInfo, TypeIdentifierRef, TypeInfo,
 };
 
 /// Sort, in place, all the unsorted components of a [`StubInfo`].
@@ -43,8 +51,15 @@ use pyo3_stub_gen::{
 pub fn sort(stub: &mut StubInfo) {
     let StubInfo {
         modules,
-        // The Python root is fixed and doesn't need any adjustment.
+        // None of these fields matter for sorting, so we ignore them;
+        // they're specified explicitly so when we upgrade, if new fields are added,
+        // we'll get a compiler error, and can decide then whether they need to be sorted or not.
         python_root: _,
+        is_mixed_layout: _,
+        config: _,
+        pyproject_dir: _,
+        default_module_name: _,
+        project_name: _,
     } = stub;
 
     // The `modules` are sorted because they're in a `BTreeMap`,
@@ -111,6 +126,8 @@ macro_rules! arbitrary_ord_structs {
     }
 }
 
+// These aren't necessarily very efficient, but they only run during stub generation,
+// which is build-time only, and relatively rarely needs to be done.
 impl<T: Ord> ArbitraryOrd for HashSet<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         let self_sorted: Vec<_> = self.iter().sorted().collect();
@@ -155,15 +172,31 @@ impl<T: ArbitraryOrd> ArbitraryOrd for Vec<T> {
     }
 }
 
+/// Sort a map by key, then wrap values in [`Arbitrary`] so they can be sorted.
+fn sort_map<'a, M, K, V>(map: &'a M) -> impl Iterator<Item = (&'a K, Arbitrary<'a, V>)>
+where
+    &'a M: IntoIterator<Item = (&'a K, &'a V)>,
+    K: Ord + 'a,
+    V: ArbitraryOrd + 'a,
+{
+    map.into_iter()
+        .sorted_by(|(lk, _), (rk, _)| lk.cmp(rk))
+        .map(|(k, v)| (k, Arbitrary(v)))
+}
+
 impl<K: Ord, V: ArbitraryOrd> ArbitraryOrd for IndexMap<K, V> {
     fn cmp<'a>(&'a self, other: &'a Self) -> Ordering {
-        let sort = |map: &'a Self| -> Vec<_> {
-            map.iter()
-                .sorted_by(|(lk, _), (rk, _)| lk.cmp(rk))
-                .map(|(k, v)| (k, Arbitrary(v)))
-                .collect()
-        };
-        sort(self).cmp(&sort(other))
+        sort_map(self)
+            .collect::<Vec<_>>()
+            .cmp(&sort_map(other).collect())
+    }
+}
+
+impl<K: Ord, V: ArbitraryOrd> ArbitraryOrd for HashMap<K, V> {
+    fn cmp<'a>(&'a self, other: &'a Self) -> Ordering {
+        sort_map(self)
+            .collect::<Vec<_>>()
+            .cmp(&sort_map(other).collect())
     }
 }
 
@@ -223,17 +256,41 @@ impl ArbitraryOrd for ParameterDefault {
             (Self::None, Self::None) => Ordering::Equal,
             (Self::None, _) => Ordering::Less,
             (_, Self::None) => Ordering::Greater,
-            (Self::Expr(x), Self::Expr(y)) => x.cmp(y),
+            (
+                Self::Expr {
+                    value: x,
+                    source_module: src_x,
+                },
+                Self::Expr {
+                    value: y,
+                    source_module: src_y,
+                },
+            ) => src_x.cmp(src_y).then_with(|| x.cmp(y)),
+        }
+    }
+}
+
+impl ArbitraryOrd for ImportKind {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Self::ByName, Self::ByName)
+            | (Self::Module, Self::Module)
+            | (Self::SameModule, Self::SameModule) => Ordering::Equal,
+            (Self::ByName, _) => Ordering::Less,
+            (_, Self::ByName) => Ordering::Greater,
+            (Self::Module, _) => Ordering::Less,
+            (_, Self::Module) => Ordering::Greater,
         }
     }
 }
 
 arbitrary_ord_structs! {
-    TypeInfo { name, import };
+    TypeInfo { source_module, name, import, type_refs };
+    TypeIdentifierRef { module, import_kind };
     MemberDef { name, r#type, doc, default, deprecated };
     MethodDef { name, parameters, r#return, doc, r#type, is_async, deprecated, type_ignored, is_overload };
     DeprecatedInfo { since, note };
-    ClassDef { name, doc, attrs, getter_setters, methods, bases, classes, match_args, subclass };
+    ClassDef { module, name, doc, attrs, getter_setters, methods, bases, classes, match_args, subclass };
     Parameter { name, kind, type_info, default };
     Parameters { positional_only, positional_or_keyword, keyword_only, varargs, varkw };
 }
@@ -252,6 +309,7 @@ fn cmp_strings<T>(k1: &String, _: &T, k2: &String, _: &T) -> Ordering {
 fn sort_class(class: &mut ClassDef) {
     let ClassDef {
         name: _, // These strings don't need adjustment.
+        module: _,
         doc: _,
         attrs: _, // Regardless of the type of the field, we can't reorder attributes.
         bases: _, // Regardless of the type of the field, we can't reorder base classes.
@@ -276,6 +334,7 @@ fn sort_class(class: &mut ClassDef) {
 fn sort_enum(r#enum: &mut EnumDef) {
     let EnumDef {
         name: _, // These strings don't need adjustment.
+        module: _,
         doc: _,
         variants: _, // Regardless of the type of the field, we can't reorder the variants.
         methods,
@@ -292,30 +351,29 @@ fn sort_enum(r#enum: &mut EnumDef) {
 
 /// Sort elements of a module definition.
 fn sort_module(module: &mut Module) {
+    // Extract and sort fields with nested contents that need to be sorted (then sort them).
+    //
+    // Most fields need no internal adjustment.
+    // If you're here because an upgrade added a new field and now you're getting a compiler error,
+    // check if the new field has internal fields that need to be sorted,
+    // then extract and sort them if needed, or add them to the list of ignored fields if not.
     let Module {
-        name: _, // Strings need no adjustment.
-        doc: _,
-        default_module_name: _,
         class,
         enum_,
-        // `function` is an ordered map from function names to overload sets;
-        // since overload sets themselves can't be reordered, there's nothing else to do.
+
+        // Most fields need no internal adjustment.
+        module_re_exports: _,
         function: _,
-        // [`VariableDef`]s are atomic;
-        // they don't themselves have internal structure that needs to be reordered.
         variables: _,
-        // The submodules are stored as an ordered set of names,
-        // so we don't need to do any more sorting.
+        type_aliases: _,
         submodules: _,
+        verbatim_all_entries: _,
+        excluded_all_entries: _,
+        doc: _,
+        name: _,
+        default_module_name: _,
     } = module;
 
-    // The [`class`]es and [`enum_`]s are sorted because they're kept in [`BTreeMap`]s, but we
-    // need to sort the individual [`ClassDef`]s and [`EnumDef`]s internally.  You might be,
-    // rightly, concerned about the fact that the ordering on [`TypeId`]s is arbitrary; however,
-    // [`pyo3_stub_gen`] sorts the [`ClassDef`]s and [`EnumDef`]s by their names before writing
-    // them out.
-    // <BTreeMap<TypeId, ClassDef>>::
-    // <BTreeMap<TypeId, EnumDef>>::values_mut(enum_)
     class.values_mut().for_each(sort_class);
     enum_.values_mut().for_each(sort_enum);
 }
