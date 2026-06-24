@@ -20,7 +20,7 @@ pub struct CloggedClippersError;
 
 #[derive(Clone, Default, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "yak_shaving")]
+#[pyclass(module = "yak_shaving", skip_from_py_object)]
 pub struct Yak {
     is_shaved: bool,
 }
@@ -47,16 +47,17 @@ impl Yak {
         self.is_shaved
     }
 
-    pub fn shave_with<'py>(&mut self, tool: PyCuttingTool<'py>) -> PyResult<()> {
+    pub fn shave_with<'py>(&mut self, tool: CuttingTool<'py>) -> PyResult<()> {
         if self.is_shaved() {
             return Ok(());
         }
 
         match tool {
-            PyCuttingTool::Shears(_) => {
+            CuttingTool::Shears(_) => {
                 self.is_shaved = true;
             }
-            PyCuttingTool::Clippers(mut clippers) => {
+            CuttingTool::Clippers(clippers) => {
+                let mut clippers = clippers.borrow_mut();
                 if clippers.is_clogged {
                     return Err(CloggedClippersError.into());
                 }
@@ -71,7 +72,7 @@ impl Yak {
 
 #[derive(Clone, Default)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "yak_shaving")]
+#[pyclass(module = "yak_shaving", skip_from_py_object)]
 pub struct Clippers {
     is_clogged: bool,
 }
@@ -96,7 +97,7 @@ impl Clippers {
 
 #[derive(Clone, Default)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "yak_shaving")]
+#[pyclass(module = "yak_shaving", skip_from_py_object, frozen)]
 pub struct Shears;
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -108,32 +109,14 @@ impl Shears {
     }
 }
 
-#[derive(Clone, FromPyObject)]
-pub enum CuttingTool {
-    Shears(Shears),
-    Clippers(Clippers),
-}
-
-pub enum PyCuttingTool<'a> {
-    Shears(PyRefMut<'a, Shears>),
-    Clippers(PyRefMut<'a, Clippers>),
-}
-
-impl<'py> FromPyObject<'_, 'py> for PyCuttingTool<'py> {
-    type Error = pyo3::PyErr;
-
-    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(shears) = obj.cast::<Shears>() {
-            return Ok(PyCuttingTool::Shears(shears.borrow_mut()));
-        }
-
-        let clippers = obj.cast::<Clippers>()?.borrow_mut();
-        Ok(PyCuttingTool::Clippers(clippers))
-    }
+#[derive(FromPyObject)]
+pub enum CuttingTool<'py> {
+    Shears(Bound<'py, Shears>),
+    Clippers(Bound<'py, Clippers>),
 }
 
 #[cfg(feature = "stubs")]
-pyo3_stub_gen::impl_stub_type!(PyCuttingTool<'_> = Shears | Clippers);
+pyo3_stub_gen::impl_stub_type!(CuttingTool<'_> = Shears | Clippers);
 
 mod errors {
     use rigetti_pyo3::{create_exception, exception};

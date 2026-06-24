@@ -29,6 +29,8 @@ ignore = [
   { id = "RUSTSEC-2025-0098", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0090", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
   { id = "RUSTSEC-2025-0100", reason = "rust-unic is unmaintained, but a transitive dependency of pyo3-stub-gen" },
+  { id = "RUSTSEC-2026-0176", reason = "vulnerability is resolved in PyO3" },
+  { id = "RUSTSEC-2026-0177", reason = "vulnerability is resolved in PyO3" },
 ]
 unused-ignored-advisory = "deny"
 
