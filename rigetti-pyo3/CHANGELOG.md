@@ -1,3 +1,9 @@
+## 0.6.0-rc.0 (2026-06-24)
+
+### Breaking Changes
+
+- upgrade PyO3 to 0.28 (#84)
+
 ## 0.5.6 (2026-05-27)
 
 ### Fixes
