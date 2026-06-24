@@ -2,18 +2,89 @@ name: Publish Crates
 
 on:
   release:
-    types: [published]
+    types: [published, prereleased]
   workflow_dispatch:
     description: "Manually publish release"
 
+concurrency:
+  # Collapse simultaneous tag-triggered runs for the same commit into one pipeline.
+  group: publish-crates-${{ github.sha }}
+  cancel-in-progress: true
+
 jobs:
+  determine-targets:
+    runs-on: ubuntu-latest
+    outputs:
+      publish_optipy: ${{ steps.targets.outputs.publish_optipy }}
+      publish_rigetti_pyo3: ${{ steps.targets.outputs.publish_rigetti_pyo3 }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: targets
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          publish_optipy=false
+          publish_rigetti_pyo3=false
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            # Manual run defaults to publishing both crates.
+            publish_optipy=true
+            publish_rigetti_pyo3=true
+          else
+            # Start with the triggering release tag.
+            if [[ "$RELEASE_TAG" == optipy/v* ]]; then
+              publish_optipy=true
+            fi
+            if [[ "$RELEASE_TAG" == rigetti-pyo3/v* ]]; then
+              publish_rigetti_pyo3=true
+            fi
+
+            # Also detect sibling package tags pointing to the same commit.
+            tags_at_sha="$(git tag --points-at "$GITHUB_SHA" || true)"
+            if echo "$tags_at_sha" | grep -Eq '^optipy/v'; then
+              publish_optipy=true
+            fi
+            if echo "$tags_at_sha" | grep -Eq '^rigetti-pyo3/v'; then
+              publish_rigetti_pyo3=true
+            fi
+          fi
+
+          echo "publish_optipy=$publish_optipy" >> "$GITHUB_OUTPUT"
+          echo "publish_rigetti_pyo3=$publish_rigetti_pyo3" >> "$GITHUB_OUTPUT"
+
+  publish-optipy:
+    needs: [determine-targets]
+    if: ${{ needs.determine-targets.outputs.publish_optipy == 'true' }}
+    runs-on: ubuntu-latest
+    name: Publish optipy
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          set -euo pipefail
+
+          crate="optipy"
+          version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
+
+          if curl -fsS "https://crates.io/api/v1/crates/${crate}/${version}" >/dev/null; then
+            echo "${crate} ${version} already published, skipping."
+            exit 0
+          fi
+
+          cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
+
   publish-rigetti-pyo3:
-    needs: [publish-optipy]
-    # the `always()` here is to ensure that the other conditions are evaluated even if `publish-optipy` was skipped
+    needs: [determine-targets, publish-optipy]
+    # Evaluate dependency result even when optipy job is skipped.
     if: |
-      always() &&
-      (needs.publish-optipy.result == 'success' || needs.publish-optipy.result == 'skipped') &&
-      (github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'rigetti-pyo3/v'))
+      needs.determine-targets.outputs.publish_rigetti_pyo3 == 'true' &&
+      (needs.publish-optipy.result == 'success' || needs.publish-optipy.result == 'skipped')
 
     runs-on: ubuntu-latest
     name: Publish rigetti-pyo3
@@ -21,15 +92,14 @@ jobs:
       - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
       - run: |
-          cargo publish -p rigetti-pyo3 --locked --token ${{ secrets.CRATES_IO_TOKEN }}
+          set -euo pipefail
 
-  publish-optipy:
-    if: ${{ github.event_name == 'workflow_dispatch' || startswith(github.event.release.tag_name, 'optipy/v') }}
+          crate="rigetti-pyo3"
+          version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
 
-    runs-on: ubuntu-latest
-    name: Publish optipy
-    steps:
-      - uses: actions/checkout@v5
-      - uses: Swatinem/rust-cache@v2
-      - run: |
-          cargo publish -p optipy --locked --token ${{ secrets.CRATES_IO_TOKEN }}
+          if curl -fsS "https://crates.io/api/v1/crates/${crate}/${version}" >/dev/null; then
+            echo "${crate} ${version} already published, skipping."
+            exit 0
+          fi
+
+          cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
