@@ -1,3 +1,13 @@
+## 0.6.0 (2026-06-24)
+
+### Breaking Changes
+
+- upgrade PyO3 to 0.28 (#84)
+
+### Fixes
+
+- force new release to publish rigetti-pyo3 with PyO3 0.28 (#88)
+
 ## 0.6.0-rc.1 (2026-06-24)
 
 ### Breaking Changes
