@@ -1,3 +1,12 @@
+## 0.1.4-rc.3 (2026-06-25)
+
+### Fixes
+
+- don't auto-release on 'main'; require manual release to specify ref
+- change how inputs are set up
+- much simpler
+- update Knope, because otherwise release tags are *always* on 'main'
+
 ## 0.1.4-rc.2 (2026-06-25)
 
 ### Fixes
