@@ -1,3 +1,12 @@
+## 0.7.1-rc.2 (2026-06-25)
+
+### Fixes
+
+- testing releases
+- don't auto-release on 'main'; require manual release to specify ref
+- change how inputs are set up
+- much simpler
+
 ## 0.7.1-rc.1 (2026-06-25)
 
 ### Fixes
