@@ -6,17 +6,22 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      type:
+      target:
         type: choice
-        description: Bump versions and trigger a new release.
+        description: How to select the release commit.
         required: true
-        default: release
+        default: current-branch
         options:
-          - release
-          - prerelease
+          - current-branch
+          - ref
+          - pull-request
       ref:
         description: Branch/tag/SHA to run release from.
-        required: true
+        required: false
+        type: string
+      pr_number:
+        description: Pull request number to release from (used when target=pull-request).
+        required: false
         type: string
 
 jobs:
@@ -24,16 +29,67 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ secrets.PAT }}
-      RELEASE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || github.ref }}
+      GH_TOKEN: ${{ secrets.PAT }}
     steps:
+      - name: Resolve release ref
+        id: resolve-ref
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          TARGET: ${{ inputs.target }}
+          INPUT_REF: ${{ inputs.ref }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+
+          case "$TARGET" in
+            current-branch)
+              release_ref="${GITHUB_REF}"
+              ;;
+            ref)
+              if [[ -z "${INPUT_REF}" ]]; then
+                echo "Input 'ref' is required when target=ref"
+                exit 1
+              fi
+              release_ref="${INPUT_REF}"
+              ;;
+            pull-request)
+              if [[ -z "${PR_NUMBER}" ]]; then
+                echo "Input 'pr_number' is required when target=pull-request"
+                exit 1
+              fi
+              pr_head_ref="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.ref')"
+              release_ref="refs/heads/${pr_head_ref}"
+              ;;
+            *)
+              echo "Unsupported target: ${TARGET}"
+              exit 1
+              ;;
+          esac
+
+          # Normalize shorthand branch input.
+          if [[ "$release_ref" == "main" ]]; then
+            release_ref="refs/heads/main"
+          fi
+
+          if [[ "$release_ref" == "refs/heads/main" ]]; then
+            release_kind="release"
+          else
+            release_kind="prerelease"
+          fi
+
+          echo "release_ref=${release_ref}" >> "$GITHUB_OUTPUT"
+          echo "release_kind=${release_kind}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: ${{ env.RELEASE_REF }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && steps.resolve-ref.outputs.release_ref || github.ref }}
       - uses: Swatinem/rust-cache@v2
 
       - name: Validate release ref
         if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_REF: ${{ steps.resolve-ref.outputs.release_ref }}
         run: |
           set -euo pipefail
 
@@ -63,10 +119,17 @@ jobs:
         run: knope release --verbose --dry-run
         if: github.event_name == 'pull_request'
 
-      - name: Prepare Prerelease
-        run: knope release --verbose --prerelease-label=rc
-        if: github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease'
+      - name: Run Release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          RELEASE_KIND: ${{ steps.resolve-ref.outputs.release_kind }}
+        run: |
+          set -euo pipefail
 
-      - name: Release
-        run: knope release --verbose
-        if: github.event_name == 'workflow_dispatch' && inputs.type == 'release'
+          if [[ "$RELEASE_KIND" == "release" ]]; then
+            echo "Running full release for main"
+            knope release --verbose
+          else
+            echo "Running prerelease for non-main ref"
+            knope release --verbose --prerelease-label=rc
+          fi
