@@ -1,3 +1,10 @@
+## 0.1.4-rc.1 (2026-06-25)
+
+### Fixes
+
+- testing releases
+- don't auto-release on 'main'; require manual release to specify ref
+
 ## 0.1.4-rc.0 (2026-06-24)
 
 ### Fixes
