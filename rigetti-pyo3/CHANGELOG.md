@@ -1,3 +1,13 @@
+## 0.7.1-rc.4 (2026-06-25)
+
+### Fixes
+
+- don't auto-release on 'main'; require manual release to specify ref
+- change how inputs are set up
+- much simpler
+- update Knope, because otherwise release tags are *always* on 'main'
+- test publishing only rigetti-pyo3
+
 ## 0.7.1-rc.3 (2026-06-25)
 
 ### Fixes
