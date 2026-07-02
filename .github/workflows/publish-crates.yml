@@ -3,8 +3,6 @@ name: Publish Crates
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    description: "Manually publish release"
 
 concurrency:
   # Collapse simultaneous tag-triggered runs for the same commit into one pipeline.
@@ -23,7 +21,6 @@ jobs:
           fetch-depth: 0
       - id: targets
         env:
-          EVENT_NAME: ${{ github.event_name }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
@@ -32,27 +29,21 @@ jobs:
           publish_optipy=false
           publish_rigetti_pyo3=false
 
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            # Manual run defaults to publishing both crates.
+          # Start with the triggering release tag.
+          if [[ "$RELEASE_TAG" == optipy/v* ]]; then
             publish_optipy=true
+          fi
+          if [[ "$RELEASE_TAG" == rigetti-pyo3/v* ]]; then
             publish_rigetti_pyo3=true
-          else
-            # Start with the triggering release tag.
-            if [[ "$RELEASE_TAG" == optipy/v* ]]; then
-              publish_optipy=true
-            fi
-            if [[ "$RELEASE_TAG" == rigetti-pyo3/v* ]]; then
-              publish_rigetti_pyo3=true
-            fi
+          fi
 
-            # Also detect sibling package tags pointing to the same commit.
-            tags_at_sha="$(git tag --points-at "$GITHUB_SHA" || true)"
-            if echo "$tags_at_sha" | grep -Eq '^optipy/v'; then
-              publish_optipy=true
-            fi
-            if echo "$tags_at_sha" | grep -Eq '^rigetti-pyo3/v'; then
-              publish_rigetti_pyo3=true
-            fi
+          # Also detect sibling package tags pointing to the same commit.
+          tags_at_sha="$(git tag --points-at "$GITHUB_SHA" || true)"
+          if echo "$tags_at_sha" | grep -Eq '^optipy/v'; then
+            publish_optipy=true
+          fi
+          if echo "$tags_at_sha" | grep -Eq '^rigetti-pyo3/v'; then
+            publish_rigetti_pyo3=true
           fi
 
           echo "publish_optipy=$publish_optipy" >> "$GITHUB_OUTPUT"
