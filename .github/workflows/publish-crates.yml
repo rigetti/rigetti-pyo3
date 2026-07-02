@@ -72,11 +72,6 @@ jobs:
           crate="optipy"
           version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
 
-          if curl -fsS "https://crates.io/api/v1/crates/${crate}/${version}" >/dev/null; then
-            echo "${crate} ${version} already published, skipping."
-            exit 0
-          fi
-
           cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
 
   publish-rigetti-pyo3:
@@ -96,10 +91,5 @@ jobs:
 
           crate="rigetti-pyo3"
           version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
-
-          if curl -fsS "https://crates.io/api/v1/crates/${crate}/${version}" >/dev/null; then
-            echo "${crate} ${version} already published, skipping."
-            exit 0
-          fi
 
           cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
