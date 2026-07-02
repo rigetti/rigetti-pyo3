@@ -2,7 +2,7 @@ name: Publish Crates
 
 on:
   release:
-    types: [published, prereleased]
+    types: [published]
   workflow_dispatch:
     description: "Manually publish release"
 
