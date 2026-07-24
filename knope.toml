@@ -1,15 +1,15 @@
 [packages.rigetti-pyo3]
-versioned_files = ["rigetti-pyo3/Cargo.toml", "Cargo.lock"]
-changelog = "rigetti-pyo3/CHANGELOG.md"
+versioned_files = ["crates/rigetti-pyo3/Cargo.toml", "Cargo.lock"]
+changelog = "crates/rigetti-pyo3/CHANGELOG.md"
 scopes = ["rigetti-pyo3"]
 
 [packages.optipy]
 versioned_files = [
-    "optipy/Cargo.toml",
+    "crates/optipy/Cargo.toml",
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "optipy" },
 ]
-changelog = "optipy/CHANGELOG.md"
+changelog = "crates/optipy/CHANGELOG.md"
 scopes = ["optipy"]
 
 [[workflows]]
