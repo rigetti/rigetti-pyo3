@@ -1,0 +1,27 @@
+[package]
+name = "pyo3-opentelemetry"
+version = "0.9.0"
+edition = "2021"
+categories = ["development-tools::ffi", "development-tools::profiling"]
+keywords = ["python", "pyo3", "opentelemetry", "tracing"]
+license = "Apache-2.0"
+readme = "./README.md"
+description = "Macro and utilities for passing OpenTelemetry context from Python to Rust"
+repository = "https://github.com/rigetti/pyo3-opentelemetry"
+rust-version = "1.88.0"
+
+[dependencies]
+qcs-dependencies-client = { workspace = true }
+pyo3 = { workspace = true }
+pyo3-opentelemetry-macros = { workspace = true }
+
+[dev-dependencies]
+futures-util = { workspace = true }
+once_cell = { workspace = true }
+qcs-dependencies-client = { workspace = true }
+tokio = { workspace = true, features = ["sync", "parking_lot", "macros"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[features]
+extension-module = []  # Deprecated: let maturin handle this for you.

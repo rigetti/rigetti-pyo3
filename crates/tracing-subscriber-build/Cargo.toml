@@ -1,0 +1,23 @@
+[package]
+name = "pyo3-tracing-subscriber-build"
+version = "0.7.0"
+edition = "2021"
+categories = ["development-tools::ffi", "development-tools::profiling"]
+keywords = ["python", "pyo3", "opentelemetry", "tracing", "build-script"]
+license = "Apache-2.0"
+readme = "./README.md"
+description = "Build script support for pyo3-tracing-subscriber: generates Python stub files."
+repository = "https://github.com/rigetti/pyo3-opentelemetry"
+rust-version = "1.88.0"
+
+[dependencies]
+handlebars = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[features]
+layer-otel-otlp = []
+layer-otel-otlp-file = []
+
+[dev-dependencies]
+rstest = { workspace = true }

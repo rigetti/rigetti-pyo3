@@ -1,0 +1,7 @@
+# The following are all type aliases.
+{{ host_package }}.{{ tracing_subscriber_module_name }}.ExportConfig
+{{ host_package }}.{{ tracing_subscriber_module_name }}.TracingConfig
+{{ host_package }}.{{ tracing_subscriber_module_name }}.layers.Config
+{{ host_package }}.{{ tracing_subscriber_module_name }}.layers.otel_otlp.ResourceValue
+{{ host_package }}.{{ tracing_subscriber_module_name }}.layers.otel_otlp.ResourceValueArray
+{{ host_package }}.{{ tracing_subscriber_module_name }}.layers.otel_otlp.Sampler
