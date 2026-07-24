@@ -1,3 +1,9 @@
+## 0.7.1 (2026-07-24)
+
+### Fixes
+
+- update to qcs-core-deps (client) 0.4 (#91)
+
 ## 0.7.1-rc.4 (2026-06-25)
 
 ### Fixes
