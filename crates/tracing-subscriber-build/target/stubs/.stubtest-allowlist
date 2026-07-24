@@ -1,7 +1,0 @@
-# The following are all type aliases.
-example._tracing_subscriber.ExportConfig
-example._tracing_subscriber.TracingConfig
-example._tracing_subscriber.layers.Config
-example._tracing_subscriber.layers.otel_otlp.ResourceValue
-example._tracing_subscriber.layers.otel_otlp.ResourceValueArray
-example._tracing_subscriber.layers.otel_otlp.Sampler

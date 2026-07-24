@@ -1,1 +1,1 @@
-extend = { path = "Makefile.toml", relative = "workspace" }
+extend = { path = "../../Makefile.toml" }

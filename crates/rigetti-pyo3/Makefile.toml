@@ -1,4 +1,4 @@
-extend = { path = "Makefile.toml", relative = "workspace" }
+extend = { path = "../../Makefile.toml" }
 
 [env]
     CARGO_HACK_COMMON_FLAGS = "--feature-powerset"
