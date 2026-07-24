@@ -30,5 +30,20 @@
     install_crate = { crate_name = "cargo-nextest", binary = "cargo-nextest", test_arg = "--help" }
     script = "cargo hack nextest run $CARGO_HACK_COMMON_FLAGS"
 
+[tasks.deadlinks]
+    install_crate = "cargo-deadlinks"
+    command = "cargo"
+    args = ["deadlinks", "--check-http", "--check-intra-doc-links"]
+
+[tasks.msrv]
+    install_crate = "cargo-msrv"
+    command = "cargo"
+    args = ["msrv"]
+
+[tasks.msrv-verify]
+    install_crate = "cargo-msrv"
+    command = "cargo"
+    args = ["msrv", "verify"]
+
 [tasks.check-all]
-    dependencies = ["deny", "check", "test-nextest", "clippy"]
+    dependencies = ["deny", "check", "test-nextest", "clippy", "deadlinks", "msrv-verify"]

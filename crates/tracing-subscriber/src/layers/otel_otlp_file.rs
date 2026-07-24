@@ -33,7 +33,7 @@ use qcs_dependencies_client::opentelemetry_sdk::{
     trace::{SpanData, SpanExporter},
 };
 
-use super::{build_env_filter, force_flush_provider_as_shutdown, LayerBuildResult, WithShutdown};
+use super::{LayerBuildResult, WithShutdown, build_env_filter, force_flush_provider_as_shutdown};
 use crate::common::PyInstrumentationLibrary;
 use tracing_subscriber::Layer;
 

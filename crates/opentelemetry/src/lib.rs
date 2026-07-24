@@ -99,8 +99,8 @@ use pyo3::{prelude::*, types::IntoPyDict};
 
 use qcs_dependencies_client::{
     opentelemetry::{
-        propagation::{Extractor, TextMapPropagator},
         Context, ContextGuard,
+        propagation::{Extractor, TextMapPropagator},
     },
     opentelemetry_sdk::propagation::TraceContextPropagator,
 };

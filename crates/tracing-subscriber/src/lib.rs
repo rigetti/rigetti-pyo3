@@ -119,7 +119,7 @@
 //! # Related Crates
 //!
 //! * `pyo3-opentelemetry` - propagates `OpenTelemetry` contexts from Python into Rust.
-use pyo3::{prelude::*, types::PyModule, PyResult, Python};
+use pyo3::{PyResult, Python, prelude::*, types::PyModule};
 use rigetti_pyo3::create_init_submodule;
 
 use self::{

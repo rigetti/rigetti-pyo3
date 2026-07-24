@@ -15,7 +15,7 @@ use crate::create_init_submodule;
 use pyo3::prelude::*;
 use tracing_subscriber::Layer;
 
-use super::{build_env_filter, LayerBuildResult, ShutdownResult, WithShutdown};
+use super::{LayerBuildResult, ShutdownResult, WithShutdown, build_env_filter};
 
 /// Configures the [`mod@tracing_subscriber::fmt`] layer.
 ///

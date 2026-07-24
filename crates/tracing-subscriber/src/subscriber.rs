@@ -14,7 +14,7 @@
 use crate::create_init_submodule;
 use pyo3::prelude::*;
 use tracing::subscriber::DefaultGuard;
-use tracing_subscriber::{layer::Layered, prelude::__tracing_subscriber_SubscriberExt, Registry};
+use tracing_subscriber::{Registry, layer::Layered, prelude::__tracing_subscriber_SubscriberExt};
 
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum ShutdownError {

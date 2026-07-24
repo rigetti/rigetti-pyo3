@@ -15,23 +15,22 @@
 use std::{collections::HashMap, time::Duration};
 
 use pyo3::prelude::*;
-use qcs_dependencies_client::opentelemetry::{trace::TracerProvider, InstrumentationScope};
+use qcs_dependencies_client::opentelemetry::{InstrumentationScope, trace::TracerProvider};
 use qcs_dependencies_client::opentelemetry_otlp::{self, WithExportConfig, WithTonicConfig};
 use qcs_dependencies_client::opentelemetry_sdk::{
-    self,
+    self, Resource,
     trace::{Sampler, SpanLimits},
-    Resource,
 };
 use qcs_dependencies_client::tonic::metadata::{
-    errors::{InvalidMetadataKey, InvalidMetadataValue},
     MetadataKey,
+    errors::{InvalidMetadataKey, InvalidMetadataValue},
 };
 use tracing_subscriber::Layer;
 
 use crate::create_init_submodule;
 use tracing_subscriber::filter::{FromEnvError, ParseError};
 
-use super::{build_env_filter, force_flush_provider_as_shutdown, LayerBuildResult, WithShutdown};
+use super::{LayerBuildResult, WithShutdown, build_env_filter, force_flush_provider_as_shutdown};
 use crate::common::PyInstrumentationLibrary;
 
 /// Configures the [`opentelemetry_otlp`] crate layer.
@@ -394,8 +393,8 @@ impl From<PySampler> for Sampler {
 const OTEL_EXPORTER_OTLP_HEADERS: &str = "OTEL_EXPORTER_OTLP_HEADERS";
 const OTEL_EXPORTER_OTLP_TRACES_HEADERS: &str = "OTEL_EXPORTER_OTLP_TRACES_HEADERS";
 
-fn get_metadata_from_environment(
-) -> Result<qcs_dependencies_client::tonic::metadata::MetadataMap, ConfigError> {
+fn get_metadata_from_environment()
+-> Result<qcs_dependencies_client::tonic::metadata::MetadataMap, ConfigError> {
     [
         OTEL_EXPORTER_OTLP_HEADERS,
         OTEL_EXPORTER_OTLP_TRACES_HEADERS,

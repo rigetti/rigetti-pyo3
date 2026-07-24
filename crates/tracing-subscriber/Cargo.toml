@@ -1,14 +1,16 @@
 [package]
 name = "pyo3-tracing-subscriber"
 version = "0.7.0"
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
 categories = ["development-tools::ffi", "development-tools::profiling"]
 keywords = ["python", "pyo3", "opentelemetry", "tracing"]
 license = "Apache-2.0"
 readme = "./README.md"
 description = "A Python module for configuring and initializing tracing subscribers from Python."
-repository = "https://github.com/rigetti/pyo3-opentelemetry"
-rust-version = "1.88.0"
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
 
 [dependencies]
 pyo3 = { workspace = true }

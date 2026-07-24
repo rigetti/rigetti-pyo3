@@ -7,7 +7,7 @@
     )
 )]
 
-use pyo3::{prelude::*, pymodule, types::PyModule, PyResult, Python};
+use pyo3::{PyResult, Python, prelude::*, pymodule, types::PyModule};
 
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
@@ -138,7 +138,7 @@ mod errors {
 }
 
 mod tools {
-    use super::{errors, Clippers, Shears};
+    use super::{Clippers, Shears, errors};
     use rigetti_pyo3::create_init_submodule;
 
     create_init_submodule! {

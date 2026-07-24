@@ -37,12 +37,12 @@ use std::{
 use indexmap::IndexMap;
 use itertools::Itertools as _;
 use pyo3_stub_gen::{
+    ImportKind, StubInfo, TypeIdentifierRef, TypeInfo,
     generate::{
         ClassDef, EnumDef, MemberDef, MethodDef, MethodType, Module, Parameter, ParameterDefault,
         Parameters,
     },
     type_info::{DeprecatedInfo, IgnoreTarget, ParameterKind},
-    ImportKind, StubInfo, TypeIdentifierRef, TypeInfo,
 };
 
 /// Sort, in place, all the unsorted components of a [`StubInfo`].

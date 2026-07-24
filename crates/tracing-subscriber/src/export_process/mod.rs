@@ -21,7 +21,7 @@ use tokio::runtime::Runtime;
 
 use super::{
     contextmanager::TracingConfig,
-    subscriber::{self, set_subscriber, SetSubscriberError, SubscriberManagerGuard},
+    subscriber::{self, SetSubscriberError, SubscriberManagerGuard, set_subscriber},
 };
 
 mod background;

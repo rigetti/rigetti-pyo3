@@ -83,9 +83,13 @@ pub struct Tracing {
 
 #[derive(thiserror::Error, Debug)]
 enum ContextManagerError {
-    #[error("entered tracing context manager with no configuration defined; ensure contextmanager only enters once")]
+    #[error(
+        "entered tracing context manager with no configuration defined; ensure contextmanager only enters once"
+    )]
     EnterWithoutConfiguration,
-    #[error("exited tracing context manager with no export process defined; ensure contextmanager only exits once after being entered")]
+    #[error(
+        "exited tracing context manager with no export process defined; ensure contextmanager only exits once after being entered"
+    )]
     ExitWithoutExportProcess,
 }
 

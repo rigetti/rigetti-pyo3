@@ -61,11 +61,12 @@
 use std::collections::HashSet;
 
 use proc_macro::TokenStream;
-use quote::{spanned::Spanned, ToTokens};
+use quote::{ToTokens, spanned::Spanned};
 use syn::{
+    LitStr, Signature,
     meta::ParseNestedMeta,
     parse::{Parse, ParseStream},
-    parse_macro_input, LitStr, Signature,
+    parse_macro_input,
 };
 
 const ERROR_UNSUPPORTED_ERROR_HANDLER: &str =
@@ -291,7 +292,7 @@ fn pypropagate_impl(item: syn::Item, config: &Configuration) -> Result<syn::Item
         }
         syn::Item::Impl(mut item_impl) => {
             for mut item in &mut item_impl.items {
-                if let syn::ImplItem::Fn(ref mut item_method) = &mut item {
+                if let syn::ImplItem::Fn(item_method) = &mut item {
                     if config.exclude.contains(&item_method.sig.ident.to_string()) {
                         continue;
                     }

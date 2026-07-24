@@ -14,7 +14,7 @@
 
 use tokio::runtime::{Builder, Runtime};
 
-use crate::subscriber::{set_subscriber, Config as SubscriberConfig, SubscriberManagerGuard};
+use crate::subscriber::{Config as SubscriberConfig, SubscriberManagerGuard, set_subscriber};
 
 use tracing::subscriber::SetGlobalDefaultError;
 

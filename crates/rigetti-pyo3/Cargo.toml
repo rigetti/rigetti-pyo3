@@ -1,14 +1,16 @@
 [package]
 name = "rigetti-pyo3"
 version = "0.8.0"
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
 license = "Apache-2.0"
-repository = "https://github.com/rigetti/rigetti-pyo3"
+repository.workspace = true
 readme = "README.md"
 categories = ["development-tools::ffi"]
 keywords = ["python", "pyo3", "ffi"]
 description = "Utilities for creating a Python wrapper for a Rust library."
-rust-version = "1.83"
+rust-version.workspace = true
+publish.workspace = true
 
 [features]
 opentelemetry = ["dep:qcs-dependencies-client"]

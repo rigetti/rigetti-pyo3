@@ -20,10 +20,9 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    parse_macro_input,
-    visit_mut::{self, VisitMut},
     Attribute, Field, ImplItemConst, ImplItemFn, Item, ItemEnum, ItemFn, ItemImpl, ItemMod,
-    ItemStruct, PatType, Receiver, Variant,
+    ItemStruct, PatType, Receiver, Variant, parse_macro_input,
+    visit_mut::{self, VisitMut},
 };
 
 #[proc_macro_attribute]
@@ -106,7 +105,7 @@ impl StripPyO3 {
 mod tests {
     use super::StripPyO3;
     use quote::quote;
-    use syn::{parse_quote, visit_mut::VisitMut, Item};
+    use syn::{Item, parse_quote, visit_mut::VisitMut};
 
     #[test]
     fn test_strip_pyo3() {

@@ -33,8 +33,8 @@ use std::fmt::Debug;
 
 use pyo3::prelude::*;
 use tracing_subscriber::{
-    filter::{FromEnvError, ParseError},
     EnvFilter, Layer, Registry,
+    filter::{FromEnvError, ParseError},
 };
 
 pub(super) type Shutdown = Box<
@@ -53,7 +53,10 @@ pub(crate) struct WithShutdown {
 
 impl Debug for WithShutdown {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "LayerWithShutdown {{ layer: Box<dyn Layer<Registry> + Send + Sync>, shutdown: Shutdown }}")
+        write!(
+            f,
+            "LayerWithShutdown {{ layer: Box<dyn Layer<Registry> + Send + Sync>, shutdown: Shutdown }}"
+        )
     }
 }
 

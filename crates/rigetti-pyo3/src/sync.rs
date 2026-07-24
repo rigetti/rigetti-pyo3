@@ -153,9 +153,7 @@ where
 /// ```
 #[macro_export]
 macro_rules! py_sync {
-    ($py:ident, $body:expr $(,)?) => {{
-        $crate::sync::invoke_async_from_py_sync($py, $body)
-    }};
+    ($py:ident, $body:expr $(,)?) => {{ $crate::sync::invoke_async_from_py_sync($py, $body) }};
 }
 
 /// The variable name to extract after executing `PY_CODE_WORKER_EVENT_LOOP` to get the worker event loop.
