@@ -435,6 +435,7 @@ ADD_CLASS_RE = re.compile(
     r"\.add_class::<(?P<rust_name>[^>]*?)>|"
     r"\.add_function\(wrap_pyfunction!\((?P<func_name>[^>]*?),.*\)"
 )
+GEN_STUB_RE = re.compile(_cfg(r"gen_stub\(([^)]+)\)"))
 STUB_GEN_RE = re.compile(
     _cfg(
         r"(?:(?:pyo3_stub_gen::)?derive::)?gen_stub_py(class(?:(?:_complex)?_enum)?|methods|function)(?:\((\s*?[^)]+)\))?"
@@ -464,17 +465,20 @@ def _pymethods(annotated: Package, path: Path, lines: Lines):
     lines = iter_delim(lines, "{}")
 
     props = PyO3Props()
+    stub_props = PyO3Props()
     attrs = []
     while line := next(lines, None):
         if line.text.strip().startswith("#["):
             line = join_lines(iter_delim(lines, "[]", first=line))
             attrs.append(line)
-            if m := PYO3_RE.search(line.text):
+            if m := GEN_STUB_RE.search(line.text):
+                stub_props |= PyO3Props.parse(m.group(1) or m.group(2))
+            elif m := PYO3_RE.search(line.text):
                 props |= PyO3Props.parse(m.group(1) or m.group(2))
             elif m := GETTER_SETTER_RE.search(line.text):
                 props["name"] = m.group(2) or m.group(4)
 
-        if not (item_match := ITEM_RE.search(line.text)):
+        if stub_props.is_("skip") or not (item_match := ITEM_RE.search(line.text)):
             continue
 
         kind: Kind = Kind(item_match.group("kind"))
@@ -939,8 +943,8 @@ def _extract_items(
             last_stub = StubAttr.from_match(stubgen_match)
             if "builder_struct_attr" in line.text:
                 last_stub.is_builder_struct = True
-        elif "gen_stub" in line and not ("override_" in line or "builder_field_attr" in line):
-            logger.error(f"We're probably missing this annotation: {ctx.path} {line}")
+        elif "gen_stub" in line and not any(s in line for s in ("skip", "override_", "builder_field_attr")):
+            logger.error(f"We're probably missing this gen_stub annotation: {ctx.path} {line}")
 
         if pyclass_match := PYITEM_RE.search(line.text):
             logger.info(f"Discovered Item in {ctx.path}: {line}")
