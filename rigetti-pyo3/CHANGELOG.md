@@ -1,3 +1,9 @@
+## 0.8.0 (2026-08-04)
+
+### Breaking Changes
+
+- update core-deps (#93)
+
 ## 0.7.1 (2026-07-24)
 
 ### Fixes
