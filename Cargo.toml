@@ -8,6 +8,7 @@ edition = "2024"
 repository = "https://github.com/rigetti/rigetti-pyo3"
 publish = true
 rust-version = "1.88.0"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 optipy = { path = "crates/optipy", version = "0.2.0" }
