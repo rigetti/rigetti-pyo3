@@ -9,13 +9,12 @@ on:
 jobs:
   prepare-release:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.PAT }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
+          token: ${{ secrets.PAT }}
       - uses: Swatinem/rust-cache@v2
 
       - name: Configure Git
