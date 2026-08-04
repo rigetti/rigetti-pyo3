@@ -14,8 +14,10 @@ publish.workspace = true
 
 [dependencies]
 pyo3 = { workspace = true }
-qcs-dependencies-client = { workspace = true, features = ["grpc", "tokio-current-thread"] }
+qcs-dependencies-client = { workspace = true, features = ["grpc", "tokio-current-thread", "otel-grpc"] }
 pyo3-async-runtimes = { workspace = true, features = ["tokio-runtime"] }
+# TODO: can't depend directly on this; fix is coming in https://gitlab.com/rigetti/qcs/utilities/qcs-core-dependencies/-/merge_requests/17
+opentelemetry-proto = { version = "0.31", default-features = true }
 rigetti-pyo3 = { workspace = true, features = [ "async-tokio", "opentelemetry" ] }
 serde = { workspace = true }
 thiserror = { workspace = true }

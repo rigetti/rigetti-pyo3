@@ -1406,7 +1406,7 @@ dependencies = [
  "once_cell",
  "pyo3",
  "pyo3-opentelemetry-macros",
- "qcs-dependencies-client 0.4.1",
+ "qcs-dependencies-client",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -1467,9 +1467,10 @@ name = "pyo3-tracing-subscriber"
 version = "0.7.0"
 dependencies = [
  "futures-core",
+ "opentelemetry-proto",
  "pyo3",
  "pyo3-async-runtimes",
- "qcs-dependencies-client 0.4.1",
+ "qcs-dependencies-client",
  "rigetti-pyo3",
  "rstest",
  "serde",
@@ -1492,9 +1493,9 @@ dependencies = [
 
 [[package]]
 name = "qcs-dependencies-client"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cda80cb6e14f8a08cd4c0e5e3b84aba22c0069e85421429c2375471bd4dc0bb"
+checksum = "b9ee4e068a9c3f6b68d61eb483326e53a6099d8b2fd5c19abc630f370b5346a2"
 dependencies = [
  "http",
  "opentelemetry",
@@ -1507,21 +1508,6 @@ dependencies = [
  "prost-types",
  "tonic",
  "tonic-prost",
- "tower",
- "tracing-opentelemetry",
-]
-
-[[package]]
-name = "qcs-dependencies-client"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9ee4e068a9c3f6b68d61eb483326e53a6099d8b2fd5c19abc630f370b5346a2"
-dependencies = [
- "http",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry-proto",
- "opentelemetry_sdk",
  "tower",
  "tracing-opentelemetry",
 ]
@@ -1664,7 +1650,7 @@ dependencies = [
  "pyo3",
  "pyo3-async-runtimes",
  "pyo3-stub-gen",
- "qcs-dependencies-client 0.5.0",
+ "qcs-dependencies-client",
  "thiserror",
  "tokio",
 ]
