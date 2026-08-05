@@ -14,10 +14,14 @@ license = "Apache-2.0"
 optipy = { path = "crates/optipy", version = "0.2.0" }
 rigetti-pyo3 = { path = "crates/rigetti-pyo3", version = "0.8.0" }
 pyo3-opentelemetry = { path = "crates/opentelemetry", version = "0.9.0" }
-pyo3-opentelemetry-macros = { version = "0.9.0", path = "crates/opentelemetry-macros" }
+pyo3-opentelemetry-macros = { path = "crates/opentelemetry-macros", version = "0.9.0" }
 pyo3-tracing-subscriber = { path = "crates/tracing-subscriber", default-features = false, version = "0.7.0" }
 pyo3-tracing-subscriber-build = { path = "crates/tracing-subscriber-build", default-features = false, version = "0.7.0" }
 
+# The `pyo3` and OpenTelemetry dependency trees are linked: `pyo3-async-runtimes` must
+# match the `pyo3` ABI, and the `tracing`/`tracing-subscriber`/OTel crates must resolve
+# to a single compatible set (enforced by `deny-multiple-versions` in `deny.toml`).
+# Bump these together, not individually.
 pyo3 = { version = "0.29", features = ["macros"] }
 pyo3-async-runtimes = { version = "0.29", features = ["tokio-runtime"] }
 qcs-dependencies-client = { version = "0.5" }
@@ -28,6 +32,7 @@ thiserror = "2.0.17"
 tokio = { version = "1.36.0", features = [] }
 tracing = { version = "0.1.41", features = ["log"] }
 tracing-subscriber = "0.3.19"
+
 futures-core = "0.3.30"
 futures-util = "0.3.31"
 handlebars = "6.4.0"

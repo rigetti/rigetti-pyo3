@@ -25,6 +25,7 @@
 #![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 #![deny(clippy::cargo)]
+// Duplicate dependency versions are checked by `cargo deny` instead; see `deny.toml`.
 #![allow(clippy::multiple_crate_versions)]
 #![warn(clippy::nursery)]
 // Conflicts with unreachable_pub
