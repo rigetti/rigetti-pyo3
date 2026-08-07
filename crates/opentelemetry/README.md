@@ -14,7 +14,7 @@ pyo3_opentelemetry provides a macro to simply and easily instrument your PyO3 bi
 
 ## Usage
 
-> For a complete functioning example, see the `examples/pyo3-opentelemetry-lib/src/lib.rs` example within this crate's repository.
+> For a complete functioning example, see the `examples/pyo3-opentelemetry-lib/src/lib.rs` example within this crate.
 
 From Rust:
 
@@ -39,4 +39,6 @@ fn my_module(_py: Python, m: &PyModule) -> PyResult<()> {
 
 These features require no Python code changes, however, [opentelemetry-api](https://pypi.org/project/opentelemetry-api/) must be installed.
 
+## Prior repository
 
+This crate previously resided at https://github.com/rigetti/pyo3-opentelemetry/

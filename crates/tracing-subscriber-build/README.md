@@ -35,3 +35,7 @@ fn main() {
 - `layer-otel-otlp` — include stubs for the `otel_otlp` layer
 
 These should match the features enabled on `pyo3-tracing-subscriber` in your regular dependencies.
+
+## Prior repository
+
+This crate previously resided at https://github.com/rigetti/pyo3-opentelemetry/

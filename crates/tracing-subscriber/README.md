@@ -17,7 +17,7 @@
 
 ## Usage
 
-> For a complete functioning example, see the `examples/pyo3-opentelemetry-lib/src/lib.rs` example within this crate's repository.
+> For a complete functioning example, see the `examples/pyo3-opentelemetry-lib/src/lib.rs` example under the `pyo3-opentelemetry` crate.
 
 Given a `pyo3` extension module named "my_module" that would like to expose the tracing subscriber configuration and context manager classes from "my_module._tracing_subscriber", from Rust:
 
@@ -97,3 +97,6 @@ fn main() {
 }
 ```
 
+## Prior repository
+
+This crate previously resided at https://github.com/rigetti/pyo3-opentelemetry/
