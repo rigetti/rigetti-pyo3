@@ -1,0 +1,34 @@
+[package]
+name = "pyo3-opentelemetry-lib"
+version = "0.1.0"
+edition = "2024"
+categories = ["development-tools::ffi", "development-tools::profiling"]
+keywords = ["python", "pyo3", "opentelemetry", "tracing"]
+license = "Apache-2.0"
+readme = "README.md"
+description = "Integration test (and example project) for `pyo3-opentelemetry`"
+publish = false
+resolver = "3"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "pyo3_opentelemetry_lib"
+crate-type =  ["cdylib", "rlib"]
+
+[dependencies]
+qcs-dependencies-client = { workspace = true }
+pyo3 = { workspace = true }
+pyo3-async-runtimes = { workspace = true, features = ["tokio", "tokio-runtime"] }
+pyo3-opentelemetry = { workspace = true }
+pyo3-tracing-subscriber = { workspace = true, features = ["layer-otel-otlp-file", "layer-otel-otlp"] }
+rigetti-pyo3 = { workspace = true, features = [ "async-tokio" ] }
+tokio = { workspace = true, features = ["sync", "parking_lot", "macros"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"], optional = true }
+
+[features]
+
+[build-dependencies]
+pyo3-tracing-subscriber-build = { workspace = true, features = ["layer-otel-otlp-file", "layer-otel-otlp"] }
+pyo3-build-config.workspace = true
+
