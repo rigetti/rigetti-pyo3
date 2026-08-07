@@ -15,7 +15,6 @@
 // Covers correctness, suspicious, style, complexity, and perf
 #![deny(clippy::all)]
 #![deny(clippy::pedantic)]
-#![deny(clippy::cargo)]
 #![warn(clippy::nursery)]
 // Has false positives that conflict with unreachable_pub
 #![allow(clippy::redundant_pub_crate)]

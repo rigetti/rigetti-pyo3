@@ -1,0 +1,79 @@
+name: Build Example Wheels
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  MANIFEST_PATH: crates/opentelemetry/examples/pyo3-opentelemetry-lib/Cargo.toml
+  MATURIN_VERSION: 1.9.4
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    env:
+      CXXFLAGS: "-std=c++11"
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: ${{ env.MATURIN_VERSION }}
+          target: ${{ matrix.target }}
+          manylinux: '2_28'
+          args: -i python${{ matrix.python-version }} --release --manifest-path ${{ env.MANIFEST_PATH }} --out dist
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+        target: [x64]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.target }}
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: ${{ env.MATURIN_VERSION }}
+          target: ${{ matrix.target }}
+          args: -i ${{ matrix.python-version }} --release --manifest-path ${{ env.MANIFEST_PATH }} --out dist
+      - name: Install built wheel
+        run: pip install pyo3-opentelemetry-lib --find-links dist --force-reinstall --no-deps --no-index
+
+  sdist:
+    runs-on: ubuntu-latest
+    env:
+      CXXFLAGS: "-std=c++11"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: ${{ env.MATURIN_VERSION }}
+          command: sdist
+          args: --manifest-path ${{ env.MANIFEST_PATH }} --out dist

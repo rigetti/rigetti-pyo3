@@ -5,6 +5,7 @@ edition = "2024"
 categories = ["development-tools::ffi", "development-tools::profiling"]
 keywords = ["python", "pyo3", "opentelemetry", "tracing"]
 license = "Apache-2.0"
+rust-version.workspace = true
 readme = "README.md"
 description = "Integration test (and example project) for `pyo3-opentelemetry`"
 publish = false
