@@ -25,7 +25,7 @@ pyo3-tracing-subscriber-build = { path = "crates/tracing-subscriber-build", defa
 pyo3 = { version = "0.29", features = ["macros"] }
 pyo3-async-runtimes = { version = "0.29", features = ["tokio-runtime"] }
 pyo3-build-config = "0.29"
-qcs-dependencies-client = { version = "0.5" }
+qcs-dependencies-client = { version = "0.5.2-mr18.0" }
 rstest = "0.17.0"
 serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0.128"
@@ -87,5 +87,3 @@ unused_qualifications = "deny"
 variant_size_differences = "deny"
 while_true = "deny"
 
-[patch.crates-io]
-qcs-dependencies-client = { path = "/Users/kstrand/workspace/qcs-core-dependencies/client" }
