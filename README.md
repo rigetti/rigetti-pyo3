@@ -9,7 +9,7 @@ This repository has helper crates for use with [PyO3](https://pyo3.rs):
   when using Cargo features to optionally generate Python bindings.
 - The [`pyo3-opentelemetry`](./crates/opentelemetry/README.md) crate 
   provides a macro to propagate OpenTelemetry context from Python into Rust.
-  - The [`pyo3-opentelemetry-macros`](./crates/opentelemetry-macros/README.md)
+  - The [`pyo3-opentelemetry-macros`](./crates/opentelemetry-macros/Cargo.toml)
     crate provides procedural macros for use with `pyo3-opentelemetry`.
 - The [`pyo3-tracing-subscriber`](./crates/tracing-subscriber/README.md)
   crate provides a `PyModule` that supports configuration and initialization
