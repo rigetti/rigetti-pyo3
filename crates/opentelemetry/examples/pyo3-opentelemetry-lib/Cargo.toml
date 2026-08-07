@@ -11,6 +11,9 @@ description = "Integration test (and example project) for `pyo3-opentelemetry`"
 publish = false
 resolver = "3"
 
+[lints]
+workspace = true
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "pyo3_opentelemetry_lib"

@@ -15,8 +15,6 @@
 //! A procedural macro that removes [`pyo3`][] related macros.
 #![doc = include_str!("../README.md")]
 
-extern crate proc_macro;
-
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -25,6 +23,10 @@ use syn::{
     visit_mut::{self, VisitMut},
 };
 
+/// Strips `PyO3` attributes from the annotated item and its children.
+///
+/// Pass `only_stubs` to strip only `#[gen_stub]` attributes, leaving the rest
+/// of the `PyO3` attributes in place.
 #[proc_macro_attribute]
 pub fn strip_pyo3(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut stripper = StripPyO3 { only_stubs: false };

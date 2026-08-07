@@ -20,49 +20,8 @@
 //!
 //! Alternatively, check the examples on the macros in this documentation.
 
-// Covers correctness, suspicious, style, complexity, and perf
-#![deny(clippy::all)]
-#![deny(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
-#![warn(clippy::nursery)]
-// Conflicts with unreachable_pub
-#![allow(clippy::redundant_pub_crate)]
 #![deny(clippy::missing_docs_in_private_items)]
-#![deny(
-    absolute_paths_not_starting_with_crate,
-    anonymous_parameters,
-    bad_style,
-    dead_code,
-    keyword_idents,
-    improper_ctypes,
-    macro_use_extern_crate,
-    meta_variable_misuse,
-    missing_abi,
-    missing_debug_implementations,
-    missing_docs,
-    no_mangle_generic_items,
-    non_shorthand_field_patterns,
-    noop_method_call,
-    overflowing_literals,
-    path_statements,
-    patterns_in_fns_without_body,
-    semicolon_in_expressions_from_macros,
-    trivial_casts,
-    trivial_numeric_casts,
-    unconditional_recursion,
-    unreachable_pub,
-    unsafe_code,
-    unused,
-    unused_allocation,
-    unused_comparisons,
-    unused_extern_crates,
-    unused_import_braces,
-    unused_lifetimes,
-    unused_parens,
-    unused_qualifications,
-    variant_size_differences,
-    while_true
-)]
 
 mod errors;
 #[cfg(feature = "stubs")]

@@ -263,11 +263,9 @@ impl PyConfig {
         Ok(Self {
             span_limits: span_limits.unwrap_or_default(),
             resource: resource.unwrap_or_default(),
-            metadata_map: metadata_map
-                .map(pyo3::types::PyAnyMethods::extract)
-                .transpose()?,
+            metadata_map: metadata_map.map(PyAnyMethods::extract).transpose()?,
             sampler: sampler
-                .map(pyo3::types::PyAnyMethods::extract)
+                .map(PyAnyMethods::extract)
                 .transpose()?
                 .unwrap_or_default(),
             endpoint: endpoint.map(String::from),

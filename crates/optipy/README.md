@@ -19,9 +19,9 @@ such as applying `#[getter]` to a method or `#[pyo3(name = "SomethingElse")]` to
 but if you wrap them in `cfg_attr`, then `pyo3` won't know how to process them.
 See the following issues and PRs for more information:
 
-- https://github.com/PyO3/pyo3/issues/780
-- https://github.com/PyO3/pyo3/issues/1003
-- https://github.com/PyO3/pyo3/pull/2786 
+- <https://github.com/PyO3/pyo3/issues/780>
+- <https://github.com/PyO3/pyo3/issues/1003>
+- <https://github.com/PyO3/pyo3/pull/2786>
 
 This crate takes [the suggestion][pr-suggestion] from the last PR listed above,
 and strips `pyo3` attributes, so you can apply it when your feature is _not_ enabled. 

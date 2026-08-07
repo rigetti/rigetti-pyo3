@@ -32,9 +32,8 @@ pub(crate) enum BuildError {
 
 /// A shutdown function that can be used to shutdown the configured tracing subscriber.
 pub(crate) type Shutdown = Box<
-    dyn (FnOnce() -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = ShutdownResult<()>> + Send + Sync>,
-        >) + Send
+    dyn (FnOnce() -> std::pin::Pin<Box<dyn Future<Output = ShutdownResult<()>> + Send + Sync>>)
+        + Send
         + Sync,
 >;
 

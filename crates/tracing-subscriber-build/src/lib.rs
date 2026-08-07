@@ -12,46 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Covers correctness, suspicious, style, complexity, and perf
-#![deny(clippy::all)]
-#![deny(clippy::pedantic)]
-#![warn(clippy::nursery)]
-// Has false positives that conflict with unreachable_pub
-#![allow(clippy::redundant_pub_crate)]
-#![deny(
-    absolute_paths_not_starting_with_crate,
-    anonymous_parameters,
-    bad_style,
-    dead_code,
-    keyword_idents,
-    improper_ctypes,
-    macro_use_extern_crate,
-    meta_variable_misuse, // May have false positives
-    missing_abi,
-    missing_debug_implementations, // can affect compile time/code size
-    missing_docs,
-    no_mangle_generic_items,
-    non_shorthand_field_patterns,
-    noop_method_call,
-    overflowing_literals,
-    path_statements,
-    patterns_in_fns_without_body,
-    semicolon_in_expressions_from_macros,
-    trivial_casts,
-    trivial_numeric_casts,
-    unconditional_recursion,
-    unreachable_pub,
-    unsafe_code,
-    unused,
-    unused_allocation,
-    unused_comparisons,
-    unused_extern_crates,
-    unused_import_braces,
-    unused_lifetimes,
-    unused_parens,
-    variant_size_differences,
-    while_true
-)]
 //! Build script support for `pyo3-tracing-subscriber`.
 //!
 //! This crate provides a function to generate Python stub files for the Python module added by

@@ -12,48 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Covers correctness, suspicious, style, complexity, and perf
-#![deny(clippy::all)]
-#![deny(clippy::pedantic)]
-#![warn(clippy::nursery)]
-// Has false positives that conflict with unreachable_pub
-#![allow(clippy::redundant_pub_crate)]
-#![deny(
-    absolute_paths_not_starting_with_crate,
-    anonymous_parameters,
-    bad_style,
-    dead_code,
-    keyword_idents,
-    improper_ctypes,
-    macro_use_extern_crate,
-    meta_variable_misuse, // May have false positives
-    missing_abi,
-    missing_debug_implementations, // can affect compile time/code size
-    missing_docs,
-    no_mangle_generic_items,
-    non_shorthand_field_patterns,
-    noop_method_call,
-    overflowing_literals,
-    path_statements,
-    patterns_in_fns_without_body,
-    private_interfaces,
-    private_bounds,
-    semicolon_in_expressions_from_macros,
-    trivial_casts,
-    trivial_numeric_casts,
-    unconditional_recursion,
-    unreachable_pub,
-    unsafe_code,
-    unused,
-    unused_allocation,
-    unused_comparisons,
-    unused_extern_crates,
-    unused_import_braces,
-    unused_lifetimes,
-    unused_parens,
-    variant_size_differences,
-    while_true
-)]
 //! This crate provides utilities for configuring and initializing a tracing subscriber from
 //! Python. Because Rust pyo3-based Python packages are binaries, these utilities are exposed
 //! as a `pyo3::types::PyModule` which can then be added to upstream pyo3 libraries.

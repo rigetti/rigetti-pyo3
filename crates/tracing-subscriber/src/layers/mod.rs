@@ -38,9 +38,8 @@ use tracing_subscriber::{
 };
 
 pub(super) type Shutdown = Box<
-    dyn (FnOnce() -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = ShutdownResult<()>> + Send + Sync>,
-        >) + Send
+    dyn (FnOnce() -> std::pin::Pin<Box<dyn Future<Output = ShutdownResult<()>> + Send + Sync>>)
+        + Send
         + Sync,
 >;
 
@@ -121,7 +120,7 @@ pub(super) fn force_flush_provider_as_shutdown(
     timeout: Option<std::time::Duration>,
 ) -> Shutdown {
     Box::new(
-        move || -> std::pin::Pin<Box<dyn std::future::Future<Output = ShutdownResult<()>> + Send + Sync>> {
+        move || -> std::pin::Pin<Box<dyn Future<Output = ShutdownResult<()>> + Send + Sync>> {
             Box::pin(async move {
                 // TODO: Should this be forwarded to the provider instead? How is this a timeout?
                 if let Some(timeout) = timeout {
@@ -200,7 +199,7 @@ pub(crate) fn init_submodule<'py>(
 
     #[cfg(feature = "layer-otel-otlp-file")]
     {
-        let submod = pyo3::types::PyModule::new(py, "otel_otlp_file")?;
+        let submod = PyModule::new(py, "otel_otlp_file")?;
         let qualified_name = format!("{name}.otel_otlp_file");
         otel_otlp_file::init_submodule(qualified_name.as_str(), py, &submod)?;
         m.add_submodule(&submod)?;
@@ -208,14 +207,14 @@ pub(crate) fn init_submodule<'py>(
     }
     #[cfg(feature = "layer-otel-otlp")]
     {
-        let submod = pyo3::types::PyModule::new(py, "otel_otlp")?;
+        let submod = PyModule::new(py, "otel_otlp")?;
         let qualified_name = format!("{name}.otel_otlp");
         otel_otlp::init_submodule(qualified_name.as_str(), py, &submod)?;
         m.add_submodule(&submod)?;
         modules.set_item(qualified_name, submod)?;
     }
 
-    let submod = pyo3::types::PyModule::new(py, "file")?;
+    let submod = PyModule::new(py, "file")?;
     let qualified_name = format!("{name}.file");
     fmt_file::init_submodule(qualified_name.as_str(), py, &submod)?;
     m.add_submodule(&submod)?;

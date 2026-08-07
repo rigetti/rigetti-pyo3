@@ -1,3 +1,11 @@
+// Example code: the workspace-wide documentation lints are not useful here.
+#![allow(
+    missing_docs,
+    missing_debug_implementations,
+    clippy::missing_docs_in_private_items,
+    clippy::missing_errors_doc,
+    clippy::must_use_candidate
+)]
 #![cfg_attr(
     feature = "stubs",
     expect(
@@ -47,7 +55,7 @@ impl Yak {
         self.is_shaved
     }
 
-    pub fn shave_with<'py>(&mut self, tool: CuttingTool<'py>) -> PyResult<()> {
+    pub fn shave_with(&mut self, tool: CuttingTool<'_>) -> PyResult<()> {
         if self.is_shaved() {
             return Ok(());
         }

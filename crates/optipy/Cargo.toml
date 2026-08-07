@@ -12,6 +12,9 @@ description = "Macro for stripping PyO3-related attributes when using features."
 rust-version.workspace = true
 publish.workspace = true
 
+[lints]
+workspace = true
+
 [lib]
 proc-macro = true
 

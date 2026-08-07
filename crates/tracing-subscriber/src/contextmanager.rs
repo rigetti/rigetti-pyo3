@@ -284,7 +284,7 @@ mod test {
         });
         let subscriber = Box::new(TracingSubscriberRegistryConfig { layer_config });
         let config = TracingConfig::CurrentThread(CurrentThreadTracingConfig {
-            export_process: crate::export_process::ExportProcessConfig::Simple(SimpleConfig {
+            export_process: ExportProcessConfig::Simple(SimpleConfig {
                 subscriber: crate::subscriber::PyConfig {
                     subscriber_config: subscriber,
                 },

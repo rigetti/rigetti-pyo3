@@ -117,7 +117,7 @@ impl crate::layers::Config for Config {
         Ok(WithShutdown {
             layer: Box::new(layer),
             shutdown: Box::new(
-                move || -> std::pin::Pin<Box<dyn std::future::Future<Output = ShutdownResult<()>> + Send + Sync>> {
+                move || -> std::pin::Pin<Box<dyn Future<Output = ShutdownResult<()>> + Send + Sync>> {
                     Box::pin(async move {
                         Ok(())
                     })

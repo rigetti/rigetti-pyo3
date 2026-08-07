@@ -1,3 +1,5 @@
+//! Generates the `_tracing_subscriber` Python stub files for this example package.
+
 use pyo3_tracing_subscriber_build::write_stub_files;
 
 fn main() {

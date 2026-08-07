@@ -94,7 +94,7 @@ pub(crate) enum StartError {
 #[derive(thiserror::Error, Debug)]
 pub(crate) enum ShutdownError {
     #[error("the subscriber failed to shutdown: {0}")]
-    Subscriber(#[from] crate::subscriber::ShutdownError),
+    Subscriber(#[from] subscriber::ShutdownError),
 }
 
 exception!(
