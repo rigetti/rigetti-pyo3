@@ -26,23 +26,23 @@ stubs = [
 async-tokio = ["dep:pyo3-async-runtimes", "dep:tokio"]
 
 [dependencies]
-pastey = "0.2"
+pastey = { workspace = true }
 # Note: `pyo3-async-runtimes` must be kept semver-compatible with pyo3.
-pyo3 = { version = "0.29", default-features = false, features = ["macros", "multiple-pymethods"] }
+pyo3 = { workspace = true, features = ["macros", "multiple-pymethods"] }
 
 # Enabled with the `stubs` feature.
-indexmap = { version = "2.2.6", optional = true }
-itertools = { version = "0.14.0", optional = true }
+indexmap = { workspace = true, optional = true }
+itertools = { workspace = true, optional = true }
 
 # Enabled with the `opentelemetry` feature.
 qcs-dependencies-client = { workspace = true, optional = true }
 optipy = { workspace = true, optional = true }
 
 # Enabled with the `async-tokio` feature.
-pyo3-async-runtimes = { version = "0.29.0", features = ["tokio-runtime"], optional = true }
-pyo3-stub-gen = { version = "0.23.0", optional = true }
-tokio = { version = "1.38.0", features = ["time"], optional = true }
+pyo3-async-runtimes = { workspace = true, features = ["tokio-runtime"], optional = true }
+pyo3-stub-gen = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["time"], optional = true }
 
 [dev-dependencies]
 optipy = { workspace = true }
-thiserror = "2.0"
+thiserror = { workspace = true }
