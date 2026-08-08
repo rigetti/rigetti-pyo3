@@ -1,16 +1,56 @@
 [packages.rigetti-pyo3]
-versioned_files = ["rigetti-pyo3/Cargo.toml", "Cargo.lock"]
-changelog = "rigetti-pyo3/CHANGELOG.md"
+versioned_files = [
+    "crates/rigetti-pyo3/Cargo.toml",
+    "Cargo.lock",
+    { path = "Cargo.toml", dependency = "rigetti-pyo3" },
+]
+changelog = "crates/rigetti-pyo3/CHANGELOG.md"
 scopes = ["rigetti-pyo3"]
 
 [packages.optipy]
 versioned_files = [
-    "optipy/Cargo.toml",
+    "crates/optipy/Cargo.toml",
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "optipy" },
 ]
-changelog = "optipy/CHANGELOG.md"
+changelog = "crates/optipy/CHANGELOG.md"
 scopes = ["optipy"]
+
+[packages.opentelemetry]
+versioned_files = [
+    "crates/opentelemetry/Cargo.toml",
+    "Cargo.lock",
+    { path = "Cargo.toml", dependency = "pyo3-opentelemetry" },
+]
+changelog = "crates/opentelemetry/CHANGELOG.md"
+scopes = ["lib", "opentelemetry", "pyo3-opentelemetry"]
+
+[packages.opentelemetry-macros]
+versioned_files = [
+    "crates/opentelemetry-macros/Cargo.toml",
+    "Cargo.lock",
+    { path = "Cargo.toml", dependency = "pyo3-opentelemetry-macros" },
+]
+changelog = "crates/opentelemetry-macros/CHANGELOG.md"
+scopes = ["macros", "opentelemetry-macros", "pyo3-opentelemetry-macros"]
+
+[packages.tracing-subscriber]
+versioned_files = [
+    "crates/tracing-subscriber/Cargo.toml",
+    "Cargo.lock",
+    { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber" },
+]
+changelog = "crates/tracing-subscriber/CHANGELOG.md"
+scopes = ["tracing-subscriber", "pyo3-tracing-subscriber"]
+
+[packages.tracing-subscriber-build]
+versioned_files = [
+    "crates/tracing-subscriber-build/Cargo.toml",
+    "Cargo.lock",
+    { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber-build" },
+]
+changelog = "crates/tracing-subscriber-build/CHANGELOG.md"
+scopes = ["tracing-subscriber", "pyo3-tracing-subscriber"]
 
 [[workflows]]
 name = "release"
