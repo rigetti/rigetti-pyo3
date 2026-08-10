@@ -1000,7 +1000,7 @@ dependencies = [
 
 [[package]]
 name = "optipy"
-version = "0.2.1"
+version = "0.2.2-rc.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1400,7 +1400,7 @@ dependencies = [
 
 [[package]]
 name = "pyo3-opentelemetry"
-version = "0.10.0"
+version = "0.11.0-rc.0"
 dependencies = [
  "futures-util",
  "once_cell",
@@ -1431,7 +1431,7 @@ dependencies = [
 
 [[package]]
 name = "pyo3-opentelemetry-macros"
-version = "0.10.0"
+version = "0.11.0-rc.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1481,7 +1481,7 @@ dependencies = [
 
 [[package]]
 name = "pyo3-tracing-subscriber"
-version = "0.8.0"
+version = "0.9.0-rc.0"
 dependencies = [
  "futures-core",
  "pyo3",
@@ -1499,7 +1499,7 @@ dependencies = [
 
 [[package]]
 name = "pyo3-tracing-subscriber-build"
-version = "0.8.0"
+version = "0.9.0-rc.0"
 dependencies = [
  "handlebars",
  "rstest",
@@ -1657,7 +1657,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rigetti-pyo3"
-version = "0.8.1"
+version = "0.8.2-rc.0"
 dependencies = [
  "indexmap",
  "itertools 0.14.0",
