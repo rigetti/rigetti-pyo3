@@ -1,3 +1,9 @@
+## 0.8.1 (2026-08-10)
+
+### Features
+
+- consolidate otel crates (#92)
+
 ## 0.8.0 (2026-08-04)
 
 ### Breaking Changes
