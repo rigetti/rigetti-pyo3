@@ -1,5 +1,6 @@
 [env]
     CARGO_HACK_COMMON_FLAGS = "--feature-powerset"
+    CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
 
 [tasks.install-cargo-hack]
     install_crate = { crate_name = "cargo-hack", binary = "cargo-hack", test_arg = ["hack", "--help"] }
@@ -28,7 +29,26 @@
 [tasks.test-nextest]
     dependencies = ["install-cargo-hack"]
     install_crate = { crate_name = "cargo-nextest", binary = "cargo-nextest", test_arg = "--help" }
-    script = "cargo hack nextest run $CARGO_HACK_COMMON_FLAGS"
+    script = "cargo hack nextest run $CARGO_HACK_COMMON_FLAGS --no-tests pass"
+
+[tasks.deadlinks]
+    install_crate = "cargo-deadlinks"
+    command = "cargo"
+    args = ["deadlinks", "--check-http", "--check-intra-doc-links"]
+    # `deadlinks` fails for _other_ crate's broken links :shrug:
+    # TODO(https://github.com/deadlinks/cargo-deadlinks/issues/133):
+    # if fixed, don't ignore errors here
+    ignore_errors = true
+
+[tasks.msrv]
+    install_crate = "cargo-msrv"
+    command = "cargo"
+    args = ["msrv"]
+
+[tasks.msrv-verify]
+    install_crate = "cargo-msrv"
+    command = "cargo"
+    args = ["msrv", "verify"]
 
 [tasks.check-all]
-    dependencies = ["deny", "check", "test-nextest", "clippy"]
+    dependencies = ["deny", "check", "test-nextest", "clippy", "deadlinks", "msrv-verify"]

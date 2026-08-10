@@ -1,0 +1,36 @@
+[package]
+name = "pyo3-tracing-subscriber"
+version = "0.8.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+categories = ["development-tools::ffi", "development-tools::profiling"]
+keywords = ["python", "pyo3", "opentelemetry", "tracing"]
+readme = "./README.md"
+description = "A Python module for configuring and initializing tracing subscribers from Python."
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pyo3 = { workspace = true }
+qcs-dependencies-client = { workspace = true, features = ["grpc", "tokio-current-thread", "otel-grpc"] }
+pyo3-async-runtimes = { workspace = true, features = ["tokio-runtime"] }
+rigetti-pyo3 = { workspace = true, features = [ "async-tokio", "opentelemetry" ] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt", "json"] }
+futures-core = { workspace = true }
+serde_json = { workspace = true }
+
+[features]
+layer-otel-otlp = []
+layer-otel-otlp-file = []
+
+[dev-dependencies]
+rstest = { workspace = true }

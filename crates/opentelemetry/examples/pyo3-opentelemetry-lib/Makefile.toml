@@ -1,0 +1,104 @@
+[tasks.check]
+  clear = true
+  dependencies = ["rust-check", "python-check-all"]
+
+[tasks.rust-check]
+  install_crate = false
+  toolchain = "${CARGO_MAKE_RUST_DEFAULT_TOOLCHAIN}"
+  command = "cargo"
+  args = ["check"]
+
+[tasks.python-check-all]
+  dependencies = ["python-check", "python-test"]
+
+###############################################################################
+# Installation and Building
+###############################################################################
+[tasks.python-build]
+  dependencies = ["python-install", "python-format"]
+
+[tasks.python-install-dependencies]
+  private = true
+  command = "poetry"
+  args = ["install", "--with", "dev", "--no-root"]
+
+[tasks.python-install]
+  dependencies = ["python-install-dependencies"]
+  command = "poetry"
+  args = ["run", "maturin", "develop"]
+
+###############################################################################
+# Formatting and Linting
+###############################################################################
+[tasks.python-format]
+  dependencies = ["python-format-black", "python-format-ruff"]
+
+[tasks.python-check]
+  dependencies = [
+    "python-check-black",
+    "python-check-ruff",
+    "python-check-pyright",
+    "python-check-stubtest",
+  ]
+
+[tasks.python-format-black]
+  dependencies = ["python-install"]
+  command = "poetry"
+  args = ["run", "black", "."]
+
+[tasks.python-format-ruff]
+  dependencies = ["python-install"]
+  command = "poetry"
+  args = ["run", "ruff", "check", "--fix"]
+
+[tasks.python-check-black]
+  dependencies = ["python-build"]
+  command = "poetry"
+  args = ["run", "black", ".", "--check"]
+
+[tasks.python-check-ruff]
+  dependencies = ["python-build"]
+  command = "poetry"
+  args = ["run", "ruff", "check"]
+
+[tasks.python-check-pyright]
+  dependencies = ["python-build"]
+  command = "poetry"
+  args = ["run", "pyright", "."]
+
+[tasks.python-check-stubtest]
+  dependencies = ["python-build"]
+  command = "poetry"
+  args = [
+    "run",
+    "stubtest",
+    "--allowlist", ".stubtest-allowlist",
+    "--allowlist", "./pyo3_opentelemetry_lib/_tracing_subscriber/.stubtest-allowlist",
+    "--ignore-unused-allowlist",  # Different items are required depending on the Python version.
+    "--mypy-config-file", "./mypy.ini",
+    "pyo3_opentelemetry_lib",
+  ]
+
+###############################################################################
+# Testing
+###############################################################################
+[tasks.python-test]
+  dependencies = ["python-build"]
+  script = '''
+  mkdir -p pyo3_opentelemetry_lib/test/__artifacts__
+  poetry run pytest .
+
+  # Note, the follow are all tests that initialize a global tracing subscriber, which is only possible to do
+  # once per process. The alternative here would be to use `pytest-xdist` in order to run each test in a
+  # separate process; that proved non-trivial on a first attempt, as the tests ran into sevaral unexpected
+  # failures.
+
+  poetry run pytest 'pyo3_opentelemetry_lib/test/tracing_test.py::test_file_export[01]' --with-global-tracing-configuration
+  poetry run pytest 'pyo3_opentelemetry_lib/test/tracing_test.py::test_file_export_asynchronous[00]' --with-global-tracing-configuration
+
+  poetry run pytest 'pyo3_opentelemetry_lib/test/tracing_test.py::test_otlp_export[02]' --with-global-tracing-configuration
+  poetry run pytest 'pyo3_opentelemetry_lib/test/tracing_test.py::test_otlp_export[03]' --with-global-tracing-configuration
+  poetry run pytest 'pyo3_opentelemetry_lib/test/tracing_test.py::test_otlp_export_asynchronous[00]' --with-global-tracing-configuration
+  poetry run pytest 'pyo3_opentelemetry_lib/test/tracing_test.py::test_otlp_export_asynchronous[01]' --with-global-tracing-configuration
+  '''
+
