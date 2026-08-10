@@ -1,3 +1,13 @@
+## 0.8.2-rc.0 (2026-08-10)
+
+### Features
+
+- consolidate otel crates (#92)
+
+### Fixes
+
+- knope 'release' step auth
+
 ## 0.8.1 (2026-08-10)
 
 ### Features
