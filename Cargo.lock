@@ -1509,9 +1509,9 @@ dependencies = [
 
 [[package]]
 name = "qcs-dependencies-client"
-version = "0.5.2-mr18.0"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f1529fb6350b78d12bce378732bab37587142f919d21f97e739888a7ff70f68"
+checksum = "594d8244e2e6408f80907ae82e49caebb3e5783e5e1512eb24bf87f10c081e2a"
 dependencies = [
  "http",
  "opentelemetry",
