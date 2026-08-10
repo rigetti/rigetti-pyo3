@@ -1,0 +1,25 @@
+[package]
+name = "optipy"
+version = "0.2.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+categories = ["development-tools::ffi"]
+keywords = ["python", "pyo3", "ffi"]
+description = "Macro for stripping PyO3-related attributes when using features."
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["full", "visit-mut"] }
+

@@ -15,6 +15,10 @@ jobs:
     outputs:
       publish_optipy: ${{ steps.targets.outputs.publish_optipy }}
       publish_rigetti_pyo3: ${{ steps.targets.outputs.publish_rigetti_pyo3 }}
+      publish_opentelemetry_macros: ${{ steps.targets.outputs.publish_opentelemetry_macros }}
+      publish_opentelemetry: ${{ steps.targets.outputs.publish_opentelemetry }}
+      publish_tracing_subscriber_build: ${{ steps.targets.outputs.publish_tracing_subscriber_build }}
+      publish_tracing_subscriber: ${{ steps.targets.outputs.publish_tracing_subscriber }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -28,6 +32,10 @@ jobs:
 
           publish_optipy=false
           publish_rigetti_pyo3=false
+          publish_opentelemetry_macros=false
+          publish_opentelemetry=false
+          publish_tracing_subscriber_build=false
+          publish_tracing_subscriber=false
 
           # Start with the triggering release tag.
           if [[ "$RELEASE_TAG" == optipy/v* ]]; then
@@ -35,6 +43,18 @@ jobs:
           fi
           if [[ "$RELEASE_TAG" == rigetti-pyo3/v* ]]; then
             publish_rigetti_pyo3=true
+          fi
+          if [[ "$RELEASE_TAG" == opentelemetry-macros/v* ]]; then
+            publish_opentelemetry_macros=true
+          fi
+          if [[ "$RELEASE_TAG" == opentelemetry/v* ]]; then
+            publish_opentelemetry=true
+          fi
+          if [[ "$RELEASE_TAG" == tracing-subscriber-build/v* ]]; then
+            publish_tracing_subscriber_build=true
+          fi
+          if [[ "$RELEASE_TAG" == tracing-subscriber/v* ]]; then
+            publish_tracing_subscriber=true
           fi
 
           # Also detect sibling package tags pointing to the same commit.
@@ -45,9 +65,25 @@ jobs:
           if echo "$tags_at_sha" | grep -Eq '^rigetti-pyo3/v'; then
             publish_rigetti_pyo3=true
           fi
+          if echo "$tags_at_sha" | grep -Eq '^opentelemetry-macros/v'; then
+            publish_opentelemetry_macros=true
+          fi
+          if echo "$tags_at_sha" | grep -Eq '^opentelemetry/v'; then
+            publish_opentelemetry=true
+          fi
+          if echo "$tags_at_sha" | grep -Eq '^tracing-subscriber-build/v'; then
+            publish_tracing_subscriber_build=true
+          fi
+          if echo "$tags_at_sha" | grep -Eq '^tracing-subscriber/v'; then
+            publish_tracing_subscriber=true
+          fi
 
           echo "publish_optipy=$publish_optipy" >> "$GITHUB_OUTPUT"
           echo "publish_rigetti_pyo3=$publish_rigetti_pyo3" >> "$GITHUB_OUTPUT"
+          echo "publish_opentelemetry_macros=$publish_opentelemetry_macros" >> "$GITHUB_OUTPUT"
+          echo "publish_opentelemetry=$publish_opentelemetry" >> "$GITHUB_OUTPUT"
+          echo "publish_tracing_subscriber_build=$publish_tracing_subscriber_build" >> "$GITHUB_OUTPUT"
+          echo "publish_tracing_subscriber=$publish_tracing_subscriber" >> "$GITHUB_OUTPUT"
 
   publish-optipy:
     needs: [determine-targets]
@@ -81,6 +117,78 @@ jobs:
           set -euo pipefail
 
           crate="rigetti-pyo3"
+          version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
+
+          cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
+
+  publish-opentelemetry-macros:
+    needs: [determine-targets]
+    if: ${{ needs.determine-targets.outputs.publish_opentelemetry_macros == 'true' }}
+    runs-on: ubuntu-latest
+    name: Publish pyo3-opentelemetry-macros
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          set -euo pipefail
+
+          crate="pyo3-opentelemetry-macros"
+          version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
+
+          cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
+
+  publish-opentelemetry:
+    needs: [determine-targets, publish-opentelemetry-macros]
+    # `pyo3-opentelemetry` depends on `pyo3-opentelemetry-macros`; evaluate the
+    # dependency result even when that job is skipped (i.e. not part of this release).
+    if: |
+      needs.determine-targets.outputs.publish_opentelemetry == 'true' &&
+      (needs.publish-opentelemetry-macros.result == 'success' || needs.publish-opentelemetry-macros.result == 'skipped')
+    runs-on: ubuntu-latest
+    name: Publish pyo3-opentelemetry
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          set -euo pipefail
+
+          crate="pyo3-opentelemetry"
+          version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
+
+          cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
+
+  publish-tracing-subscriber-build:
+    needs: [determine-targets]
+    if: ${{ needs.determine-targets.outputs.publish_tracing_subscriber_build == 'true' }}
+    runs-on: ubuntu-latest
+    name: Publish pyo3-tracing-subscriber-build
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          set -euo pipefail
+
+          crate="pyo3-tracing-subscriber-build"
+          version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
+
+          cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"
+
+  publish-tracing-subscriber:
+    needs: [determine-targets, publish-rigetti-pyo3]
+    # `pyo3-tracing-subscriber` depends on `rigetti-pyo3`; evaluate the dependency
+    # result even when that job is skipped (i.e. not part of this release).
+    if: |
+      needs.determine-targets.outputs.publish_tracing_subscriber == 'true' &&
+      (needs.publish-rigetti-pyo3.result == 'success' || needs.publish-rigetti-pyo3.result == 'skipped')
+    runs-on: ubuntu-latest
+    name: Publish pyo3-tracing-subscriber
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          set -euo pipefail
+
+          crate="pyo3-tracing-subscriber"
           version="$(cargo pkgid -p "$crate" | sed -E "s|.*#${crate}:||")"
 
           cargo publish -p "$crate" --locked --token "${{ secrets.CRATES_IO_TOKEN }}"

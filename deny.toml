@@ -114,6 +114,14 @@ deny = [
 skip = [
     { crate = "itertools", reason = "pyo3-stub-gen depends on rustpython-parser and numpy, and each use a different version" },
     { crate = "rustc-hash", reason = "pyo3-stub-gen depends on rustpython-parser and numpy, and each use a different version" },
+    # All of the following are duplicated only by transitive build/proc-macro
+    # dependencies we don't control. They resolve once the upstream crates converge.
+    { crate = "rand", reason = "rand 0.8 comes in via pyo3-stub-gen -> rustpython-parser -> unicode_names2 (build dep); everything else is on 0.9" },
+    { crate = "rand_chacha", reason = "pulled in by the two `rand` versions above" },
+    { crate = "rand_core", reason = "pulled in by the two `rand` versions above" },
+    { crate = "getrandom", reason = "getrandom 0.2 comes in via ring -> rustls -> tonic; everything else is on 0.3" },
+    { crate = "hashbrown", reason = "hashbrown 0.15 comes in via petgraph -> prost-build (build dep of pbjson-types); indexmap is on 0.16" },
+    { crate = "syn", reason = "async-trait (proc-macro dep of tonic) is on syn 3; the rest of the tree is on syn 2" },
 ]
 # Similarly to `skip` allows you to skip certain crates during duplicate
 # detection. Unlike skip, it also includes the entire tree of transitive

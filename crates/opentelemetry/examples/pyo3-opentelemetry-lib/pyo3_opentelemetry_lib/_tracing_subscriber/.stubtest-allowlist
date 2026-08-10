@@ -1,0 +1,7 @@
+# The following are all type aliases.
+pyo3_opentelemetry_lib._tracing_subscriber.ExportConfig
+pyo3_opentelemetry_lib._tracing_subscriber.TracingConfig
+pyo3_opentelemetry_lib._tracing_subscriber.layers.Config
+pyo3_opentelemetry_lib._tracing_subscriber.layers.otel_otlp.ResourceValue
+pyo3_opentelemetry_lib._tracing_subscriber.layers.otel_otlp.ResourceValueArray
+pyo3_opentelemetry_lib._tracing_subscriber.layers.otel_otlp.Sampler

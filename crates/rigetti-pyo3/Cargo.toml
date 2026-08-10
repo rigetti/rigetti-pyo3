@@ -1,0 +1,48 @@
+[package]
+name = "rigetti-pyo3"
+version = "0.8.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+categories = ["development-tools::ffi"]
+keywords = ["python", "pyo3", "ffi"]
+description = "Utilities for creating a Python wrapper for a Rust library."
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+opentelemetry = ["dep:qcs-dependencies-client"]
+stubs = [
+    "dep:indexmap",
+    "dep:itertools",
+    "dep:optipy",
+    "dep:pyo3-stub-gen",
+]
+async-tokio = ["dep:pyo3-async-runtimes", "dep:tokio"]
+
+[dependencies]
+pastey = { workspace = true }
+# Note: `pyo3-async-runtimes` must be kept semver-compatible with pyo3.
+pyo3 = { workspace = true, features = ["macros", "multiple-pymethods"] }
+
+# Enabled with the `stubs` feature.
+indexmap = { workspace = true, optional = true }
+itertools = { workspace = true, optional = true }
+
+# Enabled with the `opentelemetry` feature.
+qcs-dependencies-client = { workspace = true, optional = true }
+optipy = { workspace = true, optional = true }
+
+# Enabled with the `async-tokio` feature.
+pyo3-async-runtimes = { workspace = true, features = ["tokio-runtime"], optional = true }
+pyo3-stub-gen = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["time"], optional = true }
+
+[dev-dependencies]
+optipy = { workspace = true }
+thiserror = { workspace = true }
