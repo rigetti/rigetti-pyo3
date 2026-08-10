@@ -11,12 +11,12 @@ rust-version = "1.88.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-optipy = { path = "crates/optipy", version = "0.2.2-rc.0" }
-rigetti-pyo3 = { path = "crates/rigetti-pyo3", version = "0.8.2-rc.0" }
-pyo3-opentelemetry = { path = "crates/opentelemetry", version = "0.11.0-rc.0" }
-pyo3-opentelemetry-macros = { path = "crates/opentelemetry-macros", version = "0.11.0-rc.0" }
-pyo3-tracing-subscriber = { path = "crates/tracing-subscriber", default-features = false, version = "0.9.0-rc.0" }
-pyo3-tracing-subscriber-build = { path = "crates/tracing-subscriber-build", default-features = false, version = "0.9.0-rc.0" }
+optipy = { path = "crates/optipy", version = "0.2.1" }
+rigetti-pyo3 = { path = "crates/rigetti-pyo3", version = "0.8.1" }
+pyo3-opentelemetry = { path = "crates/opentelemetry", version = "0.11.0" }
+pyo3-opentelemetry-macros = { path = "crates/opentelemetry-macros", version = "0.11.0" }
+pyo3-tracing-subscriber = { path = "crates/tracing-subscriber", default-features = false, version = "0.9.0" }
+pyo3-tracing-subscriber-build = { path = "crates/tracing-subscriber-build", default-features = false, version = "0.9.0" }
 
 # The `pyo3` and OpenTelemetry dependency trees are linked: `pyo3-async-runtimes` must
 # match the `pyo3` ABI, and the `tracing`/`tracing-subscriber`/OTel crates must resolve
