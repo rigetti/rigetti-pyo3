@@ -1,3 +1,9 @@
+## 0.11.1-rc.0 (2026-08-18)
+
+### Features
+
+- visibility tokens for init_submodule
+
 ## 0.11.0 (2026-08-10)
 
 ### Breaking Changes
