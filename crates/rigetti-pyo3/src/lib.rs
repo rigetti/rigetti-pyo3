@@ -41,7 +41,7 @@ pub use pyo3_stub_gen;
 #[cfg(feature = "async-tokio")]
 pub use tokio;
 
-/// Create a crate-private function `init_submodule` to set up this submodule and call the same
+/// Create a public function `init_submodule` to set up this submodule and call the same
 /// function on child modules (which should also use this macro).
 ///
 /// This generates boilerplate for exposing classes, exceptions, functions, and child modules to
@@ -50,6 +50,9 @@ pub use tokio;
 /// ```python,ignore
 /// from foo.bar import baz
 /// ```
+///
+/// The `init_submodule` function is `pub` so that downstream PyO3 crates can "re-export" the
+/// module, making imported types "native" to the downstream extension module.
 ///
 /// # Example
 ///
@@ -108,7 +111,7 @@ macro_rules! create_init_submodule {
         $(submodules: [ $($mod_name: literal: $init_submod: path),+ $(,)? ],)?
     ) => {
         $(#[$meta])*
-        pub(crate) fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {
+        pub fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {
             $($(
             $crate::pyo3::types::PyModuleMethods::add_class::<$class>(m)?;
             )+)?
