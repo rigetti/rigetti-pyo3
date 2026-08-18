@@ -1,6 +1,6 @@
 [package]
 name = "pyo3-tracing-subscriber-build"
-version = "0.9.1-kjs.1"
+version = "0.9.1-kjs.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
