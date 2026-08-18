@@ -5,7 +5,8 @@ versioned_files = [
     { path = "Cargo.toml", dependency = "rigetti-pyo3" },
 ]
 changelog = "crates/rigetti-pyo3/CHANGELOG.md"
-scopes = ["rigetti-pyo3"]
+# Includes scopes of workspace dependencies: optipy
+scopes = ["rigetti-pyo3", "optipy"]
 
 [packages.optipy]
 versioned_files = [
@@ -23,7 +24,13 @@ versioned_files = [
     { path = "Cargo.toml", dependency = "pyo3-opentelemetry" },
 ]
 changelog = "crates/opentelemetry/CHANGELOG.md"
-scopes = ["lib", "opentelemetry", "pyo3-opentelemetry"]
+# Includes scopes of workspace dependencies: opentelemetry-macros
+scopes = [
+    "opentelemetry",
+    "pyo3-opentelemetry",
+    "opentelemetry-macros",
+    "pyo3-opentelemetry-macros",
+]
 
 [packages.opentelemetry-macros]
 versioned_files = [
@@ -32,25 +39,25 @@ versioned_files = [
     { path = "Cargo.toml", dependency = "pyo3-opentelemetry-macros" },
 ]
 changelog = "crates/opentelemetry-macros/CHANGELOG.md"
-scopes = ["macros", "opentelemetry-macros", "pyo3-opentelemetry-macros"]
+scopes = ["opentelemetry-macros", "pyo3-opentelemetry-macros"]
 
 [packages.tracing-subscriber]
+# Includes `tracing-subscriber-build`.
 versioned_files = [
     "crates/tracing-subscriber/Cargo.toml",
-    "Cargo.lock",
-    { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber" },
-]
-changelog = "crates/tracing-subscriber/CHANGELOG.md"
-scopes = ["tracing-subscriber", "pyo3-tracing-subscriber"]
-
-[packages.tracing-subscriber-build]
-versioned_files = [
     "crates/tracing-subscriber-build/Cargo.toml",
     "Cargo.lock",
+    { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber" },
     { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber-build" },
 ]
-changelog = "crates/tracing-subscriber-build/CHANGELOG.md"
-scopes = ["tracing-subscriber", "pyo3-tracing-subscriber"]
+changelog = "crates/tracing-subscriber/CHANGELOG.md"
+# Includes scopes of workspace dependencies: rigetti-pyo3 (and its dependency optipy)
+scopes = [
+    "tracing-subscriber",
+    "pyo3-tracing-subscriber",
+    "rigetti-pyo3",
+    "optipy",
+]
 
 [[workflows]]
 name = "release"
