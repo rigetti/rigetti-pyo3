@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      prerelease-label:
+        description: "Label used for prereleases on non-main refs"
+        required: false
+        default: rc
 
 jobs:
   prepare-release:
@@ -43,5 +48,5 @@ jobs:
             knope release --verbose
           else
             echo "Running prerelease for non-main ref"
-            knope release --verbose "--prerelease-label=pr${{ github.event.number }}"
+            knope release --verbose "--prerelease-label=${{ inputs.prerelease-label }}"
           fi
