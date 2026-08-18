@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      prerelease-label:
+        description: "Prerelease label. Leave empty for a full release on main; defaults to 'rc' on other refs."
+        required: false
+        default: ""
 
 jobs:
   prepare-release:
@@ -35,13 +40,20 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
+          PRERELEASE_LABEL: ${{ inputs.prerelease-label }}
         run: |
           set -euo pipefail
 
           if [[ "$GITHUB_REF" == "refs/heads/main" ]]; then
-            echo "Running full release for main"
-            knope release --verbose
+            if [[ -n "$PRERELEASE_LABEL" ]]; then
+              echo "Running prerelease for main with label '$PRERELEASE_LABEL'"
+              knope release --verbose "--prerelease-label=$PRERELEASE_LABEL"
+            else
+              echo "Running full release for main"
+              knope release --verbose
+            fi
           else
-            echo "Running prerelease for non-main ref"
-            knope release --verbose --prerelease-label=rc
+            label="${PRERELEASE_LABEL:-rc}"
+            echo "Running prerelease for non-main ref with label '$label'"
+            knope release --verbose "--prerelease-label=$label"
           fi

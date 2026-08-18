@@ -1,3 +1,27 @@
+## 0.9.1-kjs.2 (2026-08-18)
+
+### Fixes
+
+- let `init_submodule` be used in module re-exports
+- ensure that Knope 'scopes' lists trigger releases of 'affected' crates; consolidate tracing-subscriber-build into the tracing-subscriber knope 'package'
+- ensure that Knope updates Cargo.lock for all packages
+- tracing-subscriber-build crate must now be published whenever tracing-subscriber is
+
+## 0.9.1-kjs.1 (2026-08-18)
+
+### Fixes
+
+- let `init_submodule` be used in module re-exports
+- ensure that Knope 'scopes' lists trigger releases of 'affected' crates; consolidate tracing-subscriber-build into the tracing-subscriber knope 'package'
+- ensure that Knope updates Cargo.lock for all packages
+
+## 0.9.1-kjs.0 (2026-08-18)
+
+### Fixes
+
+- let `init_submodule` be used in module re-exports
+- ensure that Knope 'scopes' lists trigger releases of 'affected' crates; consolidate tracing-subscriber-build into the tracing-subscriber knope 'package'
+
 ## 0.9.0 (2026-08-10)
 
 ### Breaking Changes

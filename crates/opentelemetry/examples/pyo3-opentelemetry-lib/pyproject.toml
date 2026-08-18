@@ -10,8 +10,7 @@ classifiers = [
 description = "Propagation of OpenTelemetry context from Python to Rust"
 readme = "README.md"
 authors = [
-    { name = "Rigetti Computing", email = "softapps@rigetti.com" },
-    { name = "Eric Hulburd", email = "ehulburd@rigetti.com" },
+    { name = "Rigetti QPU Software", email = "qpu-software@rigetti.com" },
 ]
 
 dependencies = [
