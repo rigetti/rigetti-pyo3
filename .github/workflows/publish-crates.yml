@@ -105,6 +105,7 @@ jobs:
     needs: [determine-targets, publish-optipy]
     # Evaluate dependency result even when optipy job is skipped.
     if: |
+      !cancelled() &&
       needs.determine-targets.outputs.publish_rigetti_pyo3 == 'true' &&
       (needs.publish-optipy.result == 'success' || needs.publish-optipy.result == 'skipped')
 
@@ -142,6 +143,7 @@ jobs:
     # `pyo3-opentelemetry` depends on `pyo3-opentelemetry-macros`; evaluate the
     # dependency result even when that job is skipped (i.e. not part of this release).
     if: |
+      !cancelled() &&
       needs.determine-targets.outputs.publish_opentelemetry == 'true' &&
       (needs.publish-opentelemetry-macros.result == 'success' || needs.publish-opentelemetry-macros.result == 'skipped')
     runs-on: ubuntu-latest
@@ -178,6 +180,7 @@ jobs:
     # `pyo3-tracing-subscriber` depends on `rigetti-pyo3`; evaluate the dependency
     # result even when that job is skipped (i.e. not part of this release).
     if: |
+      !cancelled() &&
       needs.determine-targets.outputs.publish_tracing_subscriber == 'true' &&
       (needs.publish-rigetti-pyo3.result == 'success' || needs.publish-rigetti-pyo3.result == 'skipped')
     runs-on: ubuntu-latest
