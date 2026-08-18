@@ -1,3 +1,9 @@
+## 0.9.1-pr97.0 (2026-08-18)
+
+### Features
+
+- visibility tokens for init_submodule
+
 ## 0.9.1-pr.0 (2026-08-18)
 
 ### Features
