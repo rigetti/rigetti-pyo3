@@ -3,6 +3,7 @@ versioned_files = [
     "crates/rigetti-pyo3/Cargo.toml",
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "rigetti-pyo3" },
+    { path = "Cargo.lock", dependency = "rigetti-pyo3" },
 ]
 changelog = "crates/rigetti-pyo3/CHANGELOG.md"
 # Includes scopes of workspace dependencies: optipy
@@ -13,6 +14,7 @@ versioned_files = [
     "crates/optipy/Cargo.toml",
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "optipy" },
+    { path = "Cargo.lock", dependency = "optipy" },
 ]
 changelog = "crates/optipy/CHANGELOG.md"
 scopes = ["optipy"]
@@ -22,6 +24,7 @@ versioned_files = [
     "crates/opentelemetry/Cargo.toml",
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "pyo3-opentelemetry" },
+    { path = "Cargo.lock", dependency = "pyo3-opentelemetry" },
 ]
 changelog = "crates/opentelemetry/CHANGELOG.md"
 # Includes scopes of workspace dependencies: opentelemetry-macros
@@ -37,6 +40,7 @@ versioned_files = [
     "crates/opentelemetry-macros/Cargo.toml",
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "pyo3-opentelemetry-macros" },
+    { path = "Cargo.lock", dependency = "pyo3-opentelemetry-macros" },
 ]
 changelog = "crates/opentelemetry-macros/CHANGELOG.md"
 scopes = ["opentelemetry-macros", "pyo3-opentelemetry-macros"]
@@ -49,6 +53,8 @@ versioned_files = [
     "Cargo.lock",
     { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber" },
     { path = "Cargo.toml", dependency = "pyo3-tracing-subscriber-build" },
+    { path = "Cargo.lock", dependency = "pyo3-tracing-subscriber" },
+    { path = "Cargo.lock", dependency = "pyo3-tracing-subscriber-build" },
 ]
 changelog = "crates/tracing-subscriber/CHANGELOG.md"
 # Includes scopes of workspace dependencies: rigetti-pyo3 (and its dependency optipy)
