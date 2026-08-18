@@ -12,7 +12,7 @@ license = "Apache-2.0"
 
 [workspace.dependencies]
 optipy = { path = "crates/optipy", version = "0.2.1" }
-rigetti-pyo3 = { path = "crates/rigetti-pyo3", version = "0.8.1" }
+rigetti-pyo3 = { path = "crates/rigetti-pyo3", version = "0.8.2-kjs.0" }
 pyo3-opentelemetry = { path = "crates/opentelemetry", version = "0.11.0" }
 pyo3-opentelemetry-macros = { path = "crates/opentelemetry-macros", version = "0.11.0" }
 pyo3-tracing-subscriber = { path = "crates/tracing-subscriber", default-features = false, version = "0.9.0" }
