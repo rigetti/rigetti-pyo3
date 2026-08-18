@@ -110,6 +110,8 @@ macro_rules! create_init_submodule {
         $(funcs: [ $($func: path),+ $(,)? ],)?
         $(submodules: [ $($mod_name: literal: $init_submod: path),+ $(,)? ],)?
     ) => {
+        #[doc = "Add this module's classes, complex enums, consts, errors, functions,"]
+        #[doc = "and submodules to the given Python module."]
         $(#[$meta])*
         pub fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {
             $($(
