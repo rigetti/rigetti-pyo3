@@ -1,3 +1,9 @@
+## 0.2.2-pr.0 (2026-08-18)
+
+### Features
+
+- visibility tokens for init_submodule
+
 ## 0.2.2-rc.0 (2026-08-18)
 
 ### Features
