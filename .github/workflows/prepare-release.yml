@@ -43,5 +43,5 @@ jobs:
             knope release --verbose
           else
             echo "Running prerelease for non-main ref"
-            knope release --verbose --prerelease-label=rc
+            knope release --verbose "--prerelease-label=pr${{ github.event.number }}"
           fi
