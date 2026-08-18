@@ -99,6 +99,8 @@ pub use tokio;
 #[macro_export]
 macro_rules! create_init_submodule {
     (
+        @definition
+        [$visibility:vis]
         $(#[$meta:meta])*
         $(classes: [ $($class: ty),+  $(,)? ],)?
         $(complex_enums: [ $($complex_enum: ty),+ $(,)? ],)?
@@ -108,7 +110,7 @@ macro_rules! create_init_submodule {
         $(submodules: [ $($mod_name: literal: $init_submod: path),+ $(,)? ],)?
     ) => {
         $(#[$meta])*
-        pub(crate) fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {
+        $visibility fn init_submodule<'py>(_name: &str, _py: $crate::pyo3::Python<'py>, m: &$crate::pyo3::Bound<'py, $crate::pyo3::types::PyModule>) -> $crate::pyo3::PyResult<()> {
             $($(
             $crate::pyo3::types::PyModuleMethods::add_class::<$class>(m)?;
             )+)?
@@ -143,7 +145,36 @@ macro_rules! create_init_submodule {
             )?
             Ok(())
         }
-    }
+    };
+    // A body that matches none of the sections above would otherwise fall through to the entry
+    // arms and re-enter `@definition` forever; report it as what it is instead.
+    (
+        @definition
+        [$visibility:vis]
+        $($unrecognized:tt)*
+    ) => {
+        ::std::compile_error!(
+            "unrecognized `create_init_submodule!` body: expected any of `classes`, \
+             `complex_enums`, `consts`, `errors`, `funcs`, or `submodules`, each with a \
+             non-empty list"
+        );
+    };
+    // Entry points: a leading `pub,` makes the generated function callable from other crates,
+    // which is what lets a dependent crate register this module's classes into its own module
+    // tree. Without it the function stays `pub(crate)`, as it always has. Both arms forward the
+    // body untouched — splitting doc comments from the section list here would make the match
+    // ambiguous, so `@definition` parses them.
+    (
+        pub,
+        $($body:tt)*
+    ) => {
+        $crate::create_init_submodule!(@definition [pub] $($body)*);
+    };
+    (
+        $($body:tt)*
+    ) => {
+        $crate::create_init_submodule!(@definition [pub(crate)] $($body)*);
+    };
 }
 
 /// This ensures that our enums are pickleable.
