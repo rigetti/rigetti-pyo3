@@ -1,3 +1,9 @@
+## 0.8.2 (2026-10-02)
+
+### Features
+
+- let init_submodule be used in module re-exports (#97) (#98)
+
 ## 0.8.2-kjs.4 (2026-08-18)
 
 ### Fixes
