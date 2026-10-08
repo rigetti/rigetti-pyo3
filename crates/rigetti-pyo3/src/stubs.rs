@@ -1,4 +1,4 @@
-//! Provide support for sorting `.pyi` stubs.
+//! Provide support for sorting `.pyi` stubs, and for [relocating](relocate) classes between modules.
 //!
 //! [`pyo3-stub-gen`] doesn't keep its output in a consistent order.
 //! Thankfully the order is deterministic if the program is deterministic,
@@ -28,6 +28,10 @@
 //!    Ok(())
 //! }
 //! ```
+
+mod relocate;
+
+pub use relocate::{RelocateError, relocate};
 
 use std::{
     cmp::Ordering,

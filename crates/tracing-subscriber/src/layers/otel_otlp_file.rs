@@ -83,6 +83,7 @@ impl OtelOtlpFile {
 }
 
 impl SpanExporter for OtelOtlpFile {
+    #[allow(clippy::unused_async_trait_impl)]
     async fn export(&self, batch: Vec<SpanData>) -> OTelSdkResult {
         let resource_spans = group_spans_by_resource_and_scope(batch, &self.resource);
         let traces_data = opentelemetry_proto::tonic::trace::v1::TracesData { resource_spans };
