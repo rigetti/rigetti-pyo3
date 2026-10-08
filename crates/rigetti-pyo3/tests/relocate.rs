@@ -367,14 +367,25 @@ fn moves_all_entries() {
         .get_mut(SOURCE)
         .expect("source module should be present");
     source.verbatim_all_entries.insert("Server".to_string());
-    source.excluded_all_entries.extend(["Session".to_string(), "Unrelated".to_string()]);
+    source
+        .excluded_all_entries
+        .extend(["Session".to_string(), "Unrelated".to_string()]);
 
     relocate(&mut stubs, SOURCE, &["Session"], CLIENT).expect("relocation should succeed");
 
     let source = &stubs.modules[SOURCE];
     assert!(source.verbatim_all_entries.is_empty());
-    assert_eq!(source.excluded_all_entries, BTreeSet::from(["Unrelated".to_string()]));
+    assert_eq!(
+        source.excluded_all_entries,
+        BTreeSet::from(["Unrelated".to_string()])
+    );
     let client = &stubs.modules[CLIENT];
-    assert_eq!(client.verbatim_all_entries, BTreeSet::from(["Server".to_string()]));
-    assert_eq!(client.excluded_all_entries, BTreeSet::from(["Session".to_string()]));
+    assert_eq!(
+        client.verbatim_all_entries,
+        BTreeSet::from(["Server".to_string()])
+    );
+    assert_eq!(
+        client.excluded_all_entries,
+        BTreeSet::from(["Session".to_string()])
+    );
 }

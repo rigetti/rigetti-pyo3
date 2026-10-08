@@ -1073,7 +1073,11 @@ mod tests {
         let mut info = type_info("typing.Optional[client.Client]", "dep._dep.client");
         rename.type_info(&mut info);
         assert_eq!(info.name, "typing.Optional[client.Client]");
-        assert!(!info.import.contains(&ImportRef::Module("dep._dep.client".into())));
+        assert!(
+            !info
+                .import
+                .contains(&ImportRef::Module("dep._dep.client".into()))
+        );
         assert!(info.import.contains(&ImportRef::Module(TARGET.into())));
     }
 
