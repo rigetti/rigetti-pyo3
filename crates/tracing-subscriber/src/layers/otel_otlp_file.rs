@@ -107,11 +107,11 @@ impl SpanExporter for OtelOtlpFile {
         }
     }
 
-    fn shutdown_with_timeout(&mut self, _timeout: std::time::Duration) -> OTelSdkResult {
+    fn shutdown_with_timeout(&self, _timeout: std::time::Duration) -> OTelSdkResult {
         self.flush_with_sync(true)
     }
 
-    fn force_flush(&mut self) -> OTelSdkResult {
+    fn force_flush(&self) -> OTelSdkResult {
         self.flush_with_sync(false)
     }
 
