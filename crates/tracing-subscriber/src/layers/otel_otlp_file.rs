@@ -82,8 +82,8 @@ impl OtelOtlpFile {
     }
 }
 
-impl SpanExporter for OtelOtlpFile {
-    async fn export(&self, batch: Vec<SpanData>) -> OTelSdkResult {
+impl OtelOtlpFile {
+    fn export_sync(&self, batch: Vec<SpanData>) -> OTelSdkResult {
         let resource_spans = group_spans_by_resource_and_scope(batch, &self.resource);
         let traces_data = opentelemetry_proto::tonic::trace::v1::TracesData { resource_spans };
         let serialized = serde_json::to_vec(&traces_data)
@@ -105,6 +105,12 @@ impl SpanExporter for OtelOtlpFile {
                 .write_all(serialized.as_slice())
                 .map_err(|e| OTelSdkError::InternalFailure(e.to_string()))
         }
+    }
+}
+
+impl SpanExporter for OtelOtlpFile {
+    fn export(&self, batch: Vec<SpanData>) -> impl Future<Output = OTelSdkResult> {
+        std::future::ready(self.export_sync(batch))
     }
 
     fn shutdown_with_timeout(&self, _timeout: std::time::Duration) -> OTelSdkResult {

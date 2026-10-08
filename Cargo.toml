@@ -7,7 +7,7 @@ authors = ["Rigetti QPU Software <qpu-software@rigetti.com>"]
 edition = "2024"
 repository = "https://github.com/rigetti/rigetti-pyo3"
 publish = true
-rust-version = "1.88.0"
+rust-version = "1.94.0"
 license = "Apache-2.0"
 
 [workspace.dependencies]
