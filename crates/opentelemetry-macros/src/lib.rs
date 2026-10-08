@@ -247,8 +247,8 @@ fn pypropagate_impl(item: syn::Item, config: &Configuration) -> Result<syn::Item
             Ok(syn::Item::Fn(item_fn))
         }
         syn::Item::Impl(mut item_impl) => {
-            for mut item in &mut item_impl.items {
-                if let syn::ImplItem::Fn(item_method) = &mut item {
+            for item in &mut item_impl.items {
+                if let syn::ImplItem::Fn(item_method) = item {
                     if config.exclude.contains(&item_method.sig.ident.to_string()) {
                         continue;
                     }

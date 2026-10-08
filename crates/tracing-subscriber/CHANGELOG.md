@@ -1,3 +1,9 @@
+## 0.9.2-a.0 (2026-10-08)
+
+### Fixes
+
+- update qcs-dependencies-client to 0.6
+
 ## 0.9.1 (2026-10-02)
 
 ### Features
