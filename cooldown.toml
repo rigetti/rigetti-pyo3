@@ -1,0 +1,33 @@
+# QCS common `cargo-cooldown` config (https://github.com/dertin/cargo-cooldown).
+
+[cooldown]
+incompatible-publish-age = "fallback"
+# `prompt` asks before accepting fresh versions Cargo still requires; `auto` keeps the current best Cargo-valid lockfile without asking.
+# Override without editing this file: `COOLDOWN_FALLBACK_ACCEPT=auto`.
+fallback-accept = "prompt"
+# `floor` keeps initial Cargo.lock versions as the minimum; `ignore` allows lower versions.
+lockfile-baseline = "floor"
+
+[registry]
+global-min-publish-age = "7 days"
+
+# First-party crates: no cooldown.
+[[allow.package]]
+crate = "qcs"
+min-publish-age = "0"
+
+[[allow.package]]
+crate = "qcs-dependencies-client"
+min-publish-age = "0"
+
+[[allow.package]]
+crate = "qcs-api-client-common"
+min-publish-age = "0"
+
+[[allow.package]]
+crate = "qcs-api-client-grpc"
+min-publish-age = "0"
+
+[[allow.package]]
+crate = "qcs-api-client-openapi"
+min-publish-age = "0"
