@@ -57,8 +57,20 @@ mod dep {
     struct Derived;
 
     #[gen_stub_pyclass]
-    #[pyclass(module = "dep._dep.configuration")]
+    #[pyclass(module = "dep._dep.configuration", from_py_object)]
+    #[derive(Clone)]
     struct Server;
+
+    #[gen_stub_pymethods]
+    #[pymethods]
+    impl Server {
+        // Its default renders as `...`, qualified by the module of its type.
+        #[staticmethod]
+        #[pyo3(signature = (fallback = Server))]
+        fn with_fallback(fallback: Self) -> Self {
+            fallback
+        }
+    }
 
     #[gen_stub_pyclass]
     #[pyclass(module = "dep._dep.configuration")]
@@ -94,6 +106,21 @@ mod dep {
     #[gen_stub_pyclass]
     #[pyclass(module = "dep._dep.configuration")]
     struct Unrelated;
+
+    #[gen_stub_pyclass]
+    #[pyclass(module = "dep._dep.configuration")]
+    struct Loader;
+
+    #[gen_stub_pymethods]
+    #[pymethods]
+    impl Loader {
+        fn load(
+            &self,
+            #[gen_stub(override_type(type_repr = "other.Profile", imports = ("dep._dep.other")))]
+            _profile: Bound<'_, PyAny>,
+        ) {
+        }
+    }
 
     #[gen_stub_pyfunction(module = "dep._dep.configuration")]
     #[pyfunction]
@@ -161,6 +188,7 @@ fn moves_closure_and_rewrites_references() {
     let client = stubs.modules[CLIENT].to_string();
     assert!(client.contains("class Session"), "{client}");
     assert!(client.contains("def server(self) -> Server"), "{client}");
+    assert!(client.contains("fallback: Server = ...)"), "{client}");
     // Found through the hand-written type.
     assert!(client.contains("class Server"), "{client}");
     assert!(client.contains("Callable[[Server], str]"), "{client}");
@@ -263,6 +291,44 @@ fn rejects_foreign_reference() {
 }
 
 #[test]
+fn rejects_foreign_import() {
+    assert!(matches!(
+        relocate(&mut stubs(), SOURCE, &["Loader"], CLIENT),
+        Err(RelocateError::ForeignReference { class, module, .. })
+            if class == "Loader" && module == "dep._dep.other"
+    ));
+}
+
+#[test]
+fn ignores_empty_request() {
+    let mut stubs = stubs();
+    let before = stubs.clone();
+    let moved = relocate(&mut stubs, SOURCE, &[], CLIENT).expect("relocation should succeed");
+    assert!(moved.is_empty());
+    assert_eq!(stubs, before);
+}
+
+#[test]
+fn rejects_name_conflict_in_wildcard_re_export() {
+    let mut stubs = stubs();
+    let function = stubs.modules[SOURCE].function["get_session"].clone();
+    stubs
+        .modules
+        .get_mut("pkg.existing")
+        .expect("re-exporting module should be present")
+        .function
+        .insert("Server", function);
+    let before = stubs.clone();
+
+    assert!(matches!(
+        relocate(&mut stubs, SOURCE, &["Server"], EXISTING),
+        Err(RelocateError::NameConflict { name, module })
+            if name == "Server" && module == "pkg.existing"
+    ));
+    assert_eq!(stubs, before);
+}
+
+#[test]
 fn rejects_name_conflict() {
     let mut stubs = stubs();
     let function = stubs.modules[SOURCE].function["get_session"].clone();
@@ -279,4 +345,36 @@ fn rejects_name_conflict() {
         Err(RelocateError::NameConflict { name, .. }) if name == "Server"
     ));
     assert_eq!(stubs, before);
+}
+
+#[test]
+fn rejects_target_outside_module_path() {
+    let mut stubs = stubs();
+    let before = stubs.clone();
+    assert!(matches!(
+        relocate(&mut stubs, SOURCE, &["Server"], "pkg.client"),
+        Err(RelocateError::OutsideModulePath { module, root })
+            if module == "pkg.client" && root == "pkg._pkg"
+    ));
+    assert_eq!(stubs, before);
+}
+
+#[test]
+fn moves_all_entries() {
+    let mut stubs = stubs();
+    let source = stubs
+        .modules
+        .get_mut(SOURCE)
+        .expect("source module should be present");
+    source.verbatim_all_entries.insert("Server".to_string());
+    source.excluded_all_entries.extend(["Session".to_string(), "Unrelated".to_string()]);
+
+    relocate(&mut stubs, SOURCE, &["Session"], CLIENT).expect("relocation should succeed");
+
+    let source = &stubs.modules[SOURCE];
+    assert!(source.verbatim_all_entries.is_empty());
+    assert_eq!(source.excluded_all_entries, BTreeSet::from(["Unrelated".to_string()]));
+    let client = &stubs.modules[CLIENT];
+    assert_eq!(client.verbatim_all_entries, BTreeSet::from(["Server".to_string()]));
+    assert_eq!(client.excluded_all_entries, BTreeSet::from(["Session".to_string()]));
 }

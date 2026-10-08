@@ -35,6 +35,15 @@ pub enum RelocateError {
     /// The stubs have no source module, so nothing can be relocated.
     #[error("stubs have no `{0}` module")]
     MissingModule(String),
+    /// The target module isn't part of the extension module, so `StubInfo::generate` would reject
+    /// it. In a mixed layout, it must be the `module-name` module or one of its submodules.
+    #[error("`{module}` is not under the PyO3 module path `{root}`")]
+    OutsideModulePath {
+        /// The target module.
+        module: String,
+        /// The `module-name` module.
+        root: String,
+    },
     /// The target module is the source module.
     #[error("cannot relocate classes from `{0}` into itself")]
     SameModule(String),
@@ -57,12 +66,13 @@ pub enum RelocateError {
         /// The module that defines `name`.
         module: String,
     },
-    /// The target module already has something with the same name as a relocated class.
+    /// The target module, or a module with a `*` re-export of it, already has something with the
+    /// same name as a relocated class.
     #[error("`{module}` already defines or imports `{name}`")]
     NameConflict {
         /// The relocated class.
         name: String,
-        /// The target module.
+        /// The module that already has `name`.
         module: String,
     },
 }
@@ -82,7 +92,12 @@ pub enum RelocateError {
 /// Re-exports are updated to match: `*` re-exports of `target_module` gain the relocated classes,
 /// `*` re-exports of `source_module` lose them, and explicit re-exports of them from
 /// `source_module` re-export them from `target_module` instead. A new `target_module` is added to
-/// its parent's submodules.
+/// its parent's submodules. `export_verbatim!` and `exclude_from_all!` entries for relocated
+/// classes move to `target_module` with them.
+///
+/// `stubs` still has the stubs for everything else in the other package. `StubInfo::generate`
+/// writes every module it has, and in a mixed layout fails on one outside `module-name`, so remove
+/// the other package's modules before generating, as in the example below.
 ///
 /// # Errors
 ///
@@ -100,6 +115,9 @@ pub enum RelocateError {
 ///         &["Client"],
 ///         "my_package._my_package.client",
 ///     )?;
+///     stubs
+///         .modules
+///         .retain(|name, _| name != "dependency" && !name.starts_with("dependency."));
 ///     rigetti_pyo3::stubs::sort(&mut stubs);
 ///     stubs.generate()?;
 ///     Ok(())
@@ -114,21 +132,38 @@ pub fn relocate(
     if target_module == source_module {
         return Err(RelocateError::SameModule(source_module.to_string()));
     }
-    let taken = stubs
+    if !is_pyo3_generated(stubs, target_module) {
+        return Err(RelocateError::OutsideModulePath {
+            module: target_module.to_string(),
+            root: stubs.default_module_name.clone(),
+        });
+    }
+    // The target, and modules whose `*` re-exports of it will gain the relocated classes.
+    let taken: Vec<(String, BTreeSet<String>)> = stubs
         .modules
-        .get(target_module)
-        .map(|target| names(target, source_module))
-        .unwrap_or_default();
+        .values()
+        .filter(|module| module.name == target_module || re_exports_all(module, target_module))
+        .map(|module| (module.name.clone(), names(module, source_module)))
+        .collect();
     let source = stubs
         .modules
         .get_mut(source_module)
         .ok_or_else(|| RelocateError::MissingModule(source_module.to_string()))?;
     let moved = closure(source, classes, target_module)?;
-    if let Some(name) = moved.iter().find(|name| taken.contains(**name)) {
-        return Err(RelocateError::NameConflict {
-            name: (*name).to_string(),
-            module: target_module.to_string(),
-        });
+    if moved.is_empty() {
+        return Ok(moved);
+    }
+    for (module, names) in &taken {
+        let is_target = module == target_module;
+        if let Some(name) = moved
+            .iter()
+            .find(|name| (is_target || !name.starts_with('_')) && names.contains(**name))
+        {
+            return Err(RelocateError::NameConflict {
+                name: (*name).to_string(),
+                module: module.clone(),
+            });
+        }
     }
 
     let class_ids: Vec<TypeId> = source
@@ -153,15 +188,10 @@ pub fn relocate(
         .collect();
 
     let is_new = !stubs.modules.contains_key(target_module);
-    let default_module_name = stubs.default_module_name.clone();
     let target = stubs
         .modules
         .entry(target_module.to_string())
-        .or_insert_with(|| Module {
-            name: target_module.to_string(),
-            default_module_name,
-            ..Module::default()
-        });
+        .or_insert_with(|| new_module(target_module, &stubs.default_module_name));
     for (id, mut class) in classes {
         set_module(&mut class, target_module);
         target.class.insert(id, class);
@@ -169,6 +199,15 @@ pub fn relocate(
     for (id, mut enum_) in enums {
         enum_.module = Some(target_module);
         target.enum_.insert(id, enum_);
+    }
+    // `export_verbatim!` and `exclude_from_all!` declarations follow their classes.
+    if let Some(source) = stubs.modules.get_mut(source_module) {
+        let verbatim = take_moved(&mut source.verbatim_all_entries, &moved);
+        let excluded = take_moved(&mut source.excluded_all_entries, &moved);
+        if let Some(target) = stubs.modules.get_mut(target_module) {
+            target.verbatim_all_entries.extend(verbatim);
+            target.excluded_all_entries.extend(excluded);
+        }
     }
 
     if is_new {
@@ -294,6 +333,15 @@ fn names(module: &Module, source_module: &str) -> BTreeSet<String> {
         .collect()
 }
 
+/// Remove and return the entries of `entries` that name a moved class.
+fn take_moved(entries: &mut BTreeSet<String>, moved: &BTreeSet<&str>) -> BTreeSet<String> {
+    let (taken, kept) = std::mem::take(entries)
+        .into_iter()
+        .partition(|entry| moved.contains(entry.as_str()));
+    *entries = kept;
+    taken
+}
+
 /// Set the module of `class` and the classes nested in it.
 fn set_module(class: &mut ClassDef, module: &'static str) {
     class.module = Some(module);
@@ -310,15 +358,10 @@ fn register_submodule(stubs: &mut StubInfo, module: &str) {
         if !is_pyo3_generated(stubs, parent) {
             break;
         }
-        let default_module_name = stubs.default_module_name.clone();
         let parent_module = stubs
             .modules
             .entry(parent.to_string())
-            .or_insert_with(|| Module {
-                name: parent.to_string(),
-                default_module_name,
-                ..Module::default()
-            });
+            .or_insert_with(|| new_module(parent, &stubs.default_module_name));
         if !parent_module.submodules.insert(name.to_string()) {
             break;
         }
@@ -329,11 +372,29 @@ fn register_submodule(stubs: &mut StubInfo, module: &str) {
     }
 }
 
+/// An empty module, as the stubs builder creates them.
+fn new_module(name: &str, default_module_name: &str) -> Module {
+    Module {
+        name: name.to_string(),
+        default_module_name: default_module_name.to_string(),
+        ..Module::default()
+    }
+}
+
 /// Mirrors `StubInfo::is_pyo3_generated`, which is private.
 fn is_pyo3_generated(stubs: &StubInfo, module: &str) -> bool {
     let module = module.replace('-', "_");
     let root = stubs.default_module_name.replace('-', "_");
     !stubs.is_mixed_layout || module == root || module.starts_with(&format!("{root}."))
+}
+
+/// Whether `module` has a `*` re-export from `source`.
+fn re_exports_all(module: &Module, source: &str) -> bool {
+    module
+        .module_re_exports
+        .iter()
+        .zip(wildcard_flags(module))
+        .any(|(re_export, is_wildcard)| is_wildcard && re_export.source_module == source)
 }
 
 /// Add `names` to every `*` re-export from `source`.
@@ -463,52 +524,108 @@ fn is_path(path: &str) -> bool {
 }
 
 /// The identifiers and dotted paths in a type expression.
-fn paths(expr: &str) -> impl Iterator<Item = &str> {
-    expr.split(|c: char| !is_path_char(c))
-        .filter(|path| is_path(path))
+fn paths(expr: &str) -> Vec<&str> {
+    let mut paths = Vec::new();
+    map_paths(expr, |path| {
+        paths.push(path);
+        None
+    });
+    paths
 }
 
 /// Replace each identifier or dotted path in `expr` for which `f` returns `Some`.
-fn map_paths(expr: &str, mut f: impl FnMut(&str) -> Option<String>) -> String {
+///
+/// Quoted text is a forward reference, so its paths are replaced too, except for strings in a
+/// `Literal[...]`, which are values.
+fn map_paths<'a>(expr: &'a str, mut f: impl FnMut(&'a str) -> Option<String>) -> String {
     let mut out = String::with_capacity(expr.len());
+    // Bracket depths of the open `Literal[...]` subscripts.
+    let mut literals: Vec<usize> = Vec::new();
+    let mut depth = 0usize;
     let mut rest = expr;
-    while !rest.is_empty() {
-        let end = rest.find(|c: char| !is_path_char(c)).unwrap_or(rest.len());
-        let (path, tail) = rest.split_at(end);
-        match Some(path).filter(|path| is_path(path)).and_then(&mut f) {
-            Some(replacement) => out.push_str(&replacement),
-            None => out.push_str(path),
-        }
-        let sep = tail.find(is_path_char).unwrap_or(tail.len());
-        out.push_str(&tail[..sep]);
-        rest = &tail[sep..];
+    while let Some(c) = rest.chars().next() {
+        let len = if is_path_char(c) {
+            let end = rest.find(|c: char| !is_path_char(c)).unwrap_or(rest.len());
+            let path = &rest[..end];
+            match Some(path).filter(|path| is_path(path)).and_then(&mut f) {
+                Some(replacement) => out.push_str(&replacement),
+                None => out.push_str(path),
+            }
+            if last_component(path) == "Literal" && rest[end..].starts_with('[') {
+                literals.push(depth + 1);
+            }
+            end
+        } else if matches!(c, '"' | '\'') && !literals.is_empty() {
+            let len = string_len(rest);
+            out.push_str(&rest[..len]);
+            len
+        } else {
+            match c {
+                '[' => depth += 1,
+                ']' => {
+                    if literals.last() == Some(&depth) {
+                        literals.pop();
+                    }
+                    depth = depth.saturating_sub(1);
+                }
+                _ => {}
+            }
+            out.push(c);
+            c.len_utf8()
+        };
+        rest = &rest[len..];
     }
     out
 }
 
+/// The length of the string literal `s` starts with, including its quotes.
+fn string_len(s: &str) -> usize {
+    let mut chars = s.char_indices();
+    let Some((_, quote)) = chars.next() else {
+        return 0;
+    };
+    while let Some((i, c)) = chars.next() {
+        if c == '\\' {
+            chars.next();
+        } else if c == quote {
+            return i + c.len_utf8();
+        }
+    }
+    s.len()
+}
+
 /// The name a path in `info` refers to if it's something in `source`, and whether the path is
-/// qualified. A bare name only resolves to `source` when the expression is written in `source`.
+/// qualified. `refers` is [`refers_to`] for `info`. A bare name, or the head of a path like
+/// `Class.Nested`, only resolves to `source` when the expression is written in `source`.
 fn source_ident<'a>(
     path: &'a str,
     info: &TypeInfo,
     source: &str,
     in_source: bool,
+    refers: bool,
 ) -> Option<(&'a str, bool)> {
-    match path.split_once('.') {
-        None if in_source && !imported_elsewhere(info, path, source) => Some((path, false)),
-        Some((head, rest)) if head == last_component(source) && refers_to(info, source) => {
-            Some((rest.split('.').next().unwrap_or(rest), true))
-        }
-        _ => None,
+    let (head, rest) = path.split_once('.').unzip();
+    let head = head.unwrap_or(path);
+    if let Some(rest) = rest
+        && refers
+        && head == last_component(source)
+    {
+        return Some((rest.split('.').next().unwrap_or(rest), true));
     }
+    (in_source && !imported_elsewhere(info, head, source)).then_some((head, false))
+}
+
+/// The name a default value expression starts with, e.g. `Enum` in `Enum.VARIANT`.
+fn default_head(value: &str) -> &str {
+    value.split(['.', '(']).next().unwrap_or_default()
 }
 
 /// Something that inspects or rewrites the types in stubs.
 trait Visitor {
     /// Visit a type annotation.
     fn type_info(&mut self, info: &mut TypeInfo);
-    /// Visit a parameter's default value.
-    fn default(&mut self, default: &mut ParameterDefault);
+    /// Visit a parameter's default value, after its type.
+    fn default(&mut self, default: &mut ParameterDefault, type_info: &TypeInfo);
 }
 
 /// Collects what a class in the source module refers to.
@@ -561,27 +678,43 @@ impl Visitor for References<'_> {
         {
             self.foreign(&info.name, module);
         }
-
-        // Types written out by hand (e.g. `override_type`) have no `type_refs`, so look for
-        // names of this module in the expression itself. These classes are written in the source
-        // module, so bare names resolve there.
-        for path in paths(&info.name) {
-            if let Some((ident, _)) = source_ident(path, info, self.source, true)
-                && self.defined.contains_key(ident)
+        // Types written out by hand (e.g. `override_type`) only name their modules here.
+        for import in &info.import {
+            let (name, module) = match import {
+                ImportRef::Module(module) => (&info.name, module),
+                ImportRef::Type(type_ref) => (&type_ref.name, &type_ref.module),
+            };
+            if let Some(module) = module.get()
+                && self.is_foreign(module)
             {
-                self.found.push(ident.to_string());
+                self.foreign(name, module);
+            }
+        }
+
+        // Hand-written types may also have no `type_refs`, so look for names of this module in
+        // the expression itself. These classes are written in the source module, so bare names
+        // resolve there.
+        let refers = refers_to(info, self.source);
+        for path in paths(&info.name) {
+            match source_ident(path, info, self.source, true, refers) {
+                Some((ident, _)) if self.defined.contains_key(ident) => {
+                    self.found.push(ident.to_string());
+                }
+                // A bare name may be a builtin, but a qualified one is in the source module.
+                Some((ident, true)) => self.foreign(ident, self.source),
+                _ => {}
             }
         }
     }
 
-    fn default(&mut self, default: &mut ParameterDefault) {
+    fn default(&mut self, default: &mut ParameterDefault, _type_info: &TypeInfo) {
         if let ParameterDefault::Expr {
             value,
             source_module: Some(module),
         } = default
             && module.get() == Some(self.source)
         {
-            let head = value.split(['.', '(']).next().unwrap_or_default();
+            let head = default_head(value);
             if self.defined.contains_key(head) {
                 self.found.push(head.to_string());
             }
@@ -618,6 +751,8 @@ impl Visitor for Rename<'_> {
     fn type_info(&mut self, info: &mut TypeInfo) {
         let in_source = self.in_module == self.source;
         let in_target = self.in_module == self.to;
+        // Before `type_refs` are rewritten, since they may be all that ties `info` to the source.
+        let refers = refers_to(info, self.source);
         let mut touched = false;
 
         for (ident, type_ref) in &mut info.type_refs {
@@ -628,11 +763,16 @@ impl Visitor for Rename<'_> {
         }
 
         let to_component = last_component(self.to);
+        // Tracked rather than compared, since both modules may have the same last component.
+        let mut renamed = false;
+        let mut qualifies_source = false;
         let name = map_paths(&info.name, |path| {
-            let (ident, qualified) = source_ident(path, info, self.source, in_source)?;
+            let (ident, qualified) = source_ident(path, info, self.source, in_source, refers)?;
             if !self.moved.contains(ident) {
+                qualifies_source |= qualified;
                 return None;
             }
+            renamed = true;
             // `path` is either `Class...` or `source.Class...`.
             let rest = if qualified {
                 path.split_once('.').map_or(path, |(_, rest)| rest)
@@ -645,7 +785,6 @@ impl Visitor for Rename<'_> {
                 format!("{to_component}.{rest}")
             })
         });
-        let renamed = name != info.name;
 
         let import: Vec<ImportRef> = info.import.drain().collect();
         for import in import {
@@ -667,16 +806,12 @@ impl Visitor for Rename<'_> {
         }
         info.name = name;
 
-        let source_component = last_component(self.source);
-        let still_refers = info.type_refs.values().any(|r| self.is_source(&r.module))
+        let still_refers = qualifies_source
+            || info.type_refs.values().any(|r| self.is_source(&r.module))
             || info
                 .import
                 .iter()
-                .any(|import| matches!(import, ImportRef::Type(t) if self.is_source(&t.module)))
-            || paths(&info.name).any(|path| {
-                path.split_once('.')
-                    .is_some_and(|(head, _)| head == source_component)
-            });
+                .any(|import| matches!(import, ImportRef::Type(t) if self.is_source(&t.module)));
         let is_single_path = info.name.chars().all(is_path_char);
         if info
             .source_module
@@ -701,16 +836,20 @@ impl Visitor for Rename<'_> {
         }
     }
 
-    fn default(&mut self, default: &mut ParameterDefault) {
+    fn default(&mut self, default: &mut ParameterDefault, type_info: &TypeInfo) {
+        // `pyo3_stub_gen` takes a default's module from its parameter's type, even for `...`.
         if let ParameterDefault::Expr {
             value,
             source_module: Some(module),
         } = default
+            && self.is_source(module)
+            && (self.moved.contains(default_head(value))
+                || type_info
+                    .source_module
+                    .as_ref()
+                    .is_some_and(|m| m.get() == Some(self.to)))
         {
-            let head = value.split(['.', '(']).next().unwrap_or_default();
-            if self.is_source(module) && self.moved.contains(head) {
-                *module = self.to();
-            }
+            *module = self.to();
         }
     }
 }
@@ -806,13 +945,15 @@ fn visit_parameters(parameters: &mut Parameters, visitor: &mut impl Visitor) {
     } in all
     {
         visitor.type_info(type_info);
-        visitor.default(default);
+        visitor.default(default, type_info);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::{HashMap, HashSet};
+
+    use pyo3_stub_gen::{ImportKind, TypeIdentifierRef};
 
     use super::*;
 
@@ -891,10 +1032,90 @@ mod tests {
         );
         assert!(info.import.contains(&ImportRef::Module(TARGET.into())));
 
+        let mut info = TypeInfo::unqualified("AuthServer.Kind");
+        rename(&moved, SOURCE).type_info(&mut info);
+        assert_eq!(info.name, "client.AuthServer.Kind");
+
         // Elsewhere, a bare name can't mean the source module's class.
         let mut info = TypeInfo::unqualified("AuthServer");
         rename(&moved, "pkg").type_info(&mut info);
         assert_eq!(info.name, "AuthServer");
+    }
+
+    #[test]
+    fn rename_resolves_qualified_names_through_type_refs() {
+        let moved = BTreeSet::from(["OAuthSession"]);
+        let mut info = TypeInfo {
+            name: "typing.Optional[configuration.OAuthSession]".to_string(),
+            source_module: None,
+            import: HashSet::from([ImportRef::Module("typing".into())]),
+            type_refs: HashMap::from([(
+                "OAuthSession".to_string(),
+                TypeIdentifierRef {
+                    module: SOURCE.into(),
+                    import_kind: ImportKind::Module,
+                },
+            )]),
+        };
+        rename(&moved, "pkg").type_info(&mut info);
+        assert_eq!(info.name, "typing.Optional[client.OAuthSession]");
+    }
+
+    #[test]
+    fn rename_retargets_modules_with_the_same_last_component() {
+        let moved = BTreeSet::from(["Client"]);
+        let mut rename = Rename {
+            source: "dep._dep.client",
+            to: TARGET,
+            moved: &moved,
+            in_module: "pkg",
+        };
+        let mut info = type_info("typing.Optional[client.Client]", "dep._dep.client");
+        rename.type_info(&mut info);
+        assert_eq!(info.name, "typing.Optional[client.Client]");
+        assert!(!info.import.contains(&ImportRef::Module("dep._dep.client".into())));
+        assert!(info.import.contains(&ImportRef::Module(TARGET.into())));
+    }
+
+    #[test]
+    fn rename_retargets_defaults_with_their_type() {
+        let moved = BTreeSet::from(["AuthServer"]);
+        let mut rename = rename(&moved, TARGET);
+        let mut info = TypeInfo::locally_defined("AuthServer", SOURCE.into());
+        let mut default = ParameterDefault::Expr {
+            value: "...".to_string(),
+            source_module: Some(SOURCE.into()),
+        };
+        rename.type_info(&mut info);
+        rename.default(&mut default, &info);
+        assert_eq!(
+            default,
+            ParameterDefault::Expr {
+                value: "...".to_string(),
+                source_module: Some(TARGET.into()),
+            }
+        );
+    }
+
+    #[test]
+    fn map_paths_keeps_literal_strings() {
+        let mark = |path: &str| Some(format!("<{path}>"));
+        assert_eq!(
+            map_paths(r#"typing.Literal["Server", 'a\'b', Color.RED] | "X""#, mark),
+            r#"<typing.Literal>["Server", 'a\'b', <Color.RED>] | "<X>""#
+        );
+        assert_eq!(
+            map_paths(r#"dict[typing.Literal["k"], "Server"]"#, mark),
+            r#"<dict>[<typing.Literal>["k"], "<Server>"]"#
+        );
+    }
+
+    #[test]
+    fn rename_skips_literal_strings_and_rewrites_forward_references() {
+        let moved = BTreeSet::from(["Server"]);
+        let mut info = TypeInfo::unqualified(r#"typing.Literal["Server"] | "Server""#);
+        rename(&moved, SOURCE).type_info(&mut info);
+        assert_eq!(info.name, r#"typing.Literal["Server"] | "client.Server""#);
     }
 
     #[test]
