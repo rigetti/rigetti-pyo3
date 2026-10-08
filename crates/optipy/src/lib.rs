@@ -187,7 +187,7 @@ mod tests {
 
         StripPyO3 { only_stubs: false }.visit_item_mut(&mut input);
         let result = format!("{}", quote!(#input));
-        assert_eq!(result.clone(), expected);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -215,7 +215,7 @@ mod tests {
 
         StripPyO3 { only_stubs: true }.visit_item_mut(&mut input);
         let result = format!("{}", quote!(#input));
-        assert_eq!(result.clone(), expected);
+        assert_eq!(result, expected);
     }
 
     #[test]
@@ -242,6 +242,6 @@ mod tests {
 
         StripPyO3 { only_stubs: false }.visit_item_mut(&mut input);
         let result = format!("{}", quote!(#input));
-        assert_eq!(result.clone(), expected);
+        assert_eq!(result, expected);
     }
 }
