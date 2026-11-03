@@ -1,3 +1,9 @@
+## 0.9.3 (2026-11-03)
+
+### Fixes
+
+- prevent GIL deadlock during concurrent sync cold starts (#102)
+
 ## 0.9.2 (2026-10-08)
 
 ### Fixes
