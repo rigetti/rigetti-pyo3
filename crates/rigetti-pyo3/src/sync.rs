@@ -1,15 +1,16 @@
 //! Helpers that allow asynchronous Rust functions to be exported as synchronous Python functions.
 
 use pyo3::prelude::*;
+use pyo3::sync::PyOnceLock;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{PyStubType, TypeInfo};
+use std::marker::PhantomData;
 #[cfg(feature = "async-tokio")]
 use std::{
     ffi::CString,
     future::Future,
     sync::{Arc, Mutex},
 };
-use std::{marker::PhantomData, sync::LazyLock};
 
 /// The result of an asynchronous Python function.
 ///
@@ -205,20 +206,7 @@ def get_result(loop, awaitable):
 ";
 
 /// Worker event loop used for running asynchronous tasks from synchronous Python code.
-static PY_WORKER_EVENT_LOOP: LazyLock<Py<PyAny>> = LazyLock::new(|| {
-    // Create a worker event loop and start it on a Python-created daemon thread.
-    Python::attach(|py| {
-        let code = CString::new(PY_CODE_WORKER_EVENT_LOOP).unwrap();
-        let module_name = CString::new("py_worker_event_loop").unwrap();
-        let module = PyModule::from_code(py, &code, &module_name, &module_name)
-            .expect("failed to create worker event loop module");
-
-        module
-            .getattr(PY_VARNAME_LOOP)
-            .expect("failed to get Python event loop variable from module")
-            .into()
-    })
-});
+static PY_WORKER_EVENT_LOOP: PyOnceLock<Py<PyAny>> = PyOnceLock::new();
 
 /// Spawn and block on a future using the pyo3 tokio runtime.
 /// Useful for returning a synchronous `PyResult`.
@@ -240,13 +228,28 @@ where
     F: Future<Output = PyResult<T>> + Send + 'static,
     T: Send + Sync + 'static,
 {
+    // Create a worker event loop and start it on a Python-created daemon thread.
+    // PyOnceLock detaches waiting threads so initialization can reacquire the GIL.
+    let event_loop = PY_WORKER_EVENT_LOOP
+        .get_or_init(py, || {
+            let code = CString::new(PY_CODE_WORKER_EVENT_LOOP).unwrap();
+            let module_name = CString::new("py_worker_event_loop").unwrap();
+            let module = PyModule::from_code(py, &code, &module_name, &module_name)
+                .expect("failed to create worker event loop module");
+
+            module
+                .getattr(PY_VARNAME_LOOP)
+                .expect("failed to get Python event loop variable from module")
+                .into()
+        })
+        .bind(py);
+
     // Copied from `pyo3_async_runtimes`:
     let result_tx = Arc::new(Mutex::new(None));
     let result_rx = Arc::clone(&result_tx);
     let coro = ::pyo3_async_runtimes::tokio::future_into_py_with_locals(
         py,
-        ::pyo3_async_runtimes::TaskLocals::new(PY_WORKER_EVENT_LOOP.bind(py).to_owned())
-            .copy_context(py)?,
+        ::pyo3_async_runtimes::TaskLocals::new(event_loop.to_owned()).copy_context(py)?,
         async move {
             let val = body.await?;
             if let Ok(mut result) = result_tx.lock() {
@@ -265,7 +268,7 @@ where
 
     let _ = module
         .getattr(PY_FUNCNAME_RUN_ON_LOOP)?
-        .call((PY_WORKER_EVENT_LOOP.bind(py), &coro), None)?;
+        .call((event_loop, &coro), None)?;
 
     let result = result_rx
         .lock()
